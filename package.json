@@ -20,11 +20,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/YOUR-USERNAME/rust-server-manager-clone.git"
+    "url": "https://github.com/budora15-max/rust-server-manager-clone.git"
   },
-  "homepage": "https://github.com/YOUR-USERNAME/rust-server-manager-clone#readme",
+  "homepage": "https://github.com/budora15-max/rust-server-manager-clone#readme",
   "bugs": {
-    "url": "https://github.com/YOUR-USERNAME/rust-server-manager-clone/issues"
+    "url": "https://github.com/budora15-max/rust-server-manager-clone/issues"
   },
   "main": "dist-electron/main.js",
   "scripts": {
