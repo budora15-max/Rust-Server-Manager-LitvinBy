@@ -1,0 +1,94 @@
+{
+  "name": "rust-server-manager-clone",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Desktop application for managing Rust game servers (Rust Server Manager clone)",
+  "author": "RSM Team",
+  "license": "MIT",
+  "keywords": [
+    "rust",
+    "rust-server",
+    "server-manager",
+    "rcon",
+    "oxide",
+    "carbon",
+    "electron",
+    "react"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/YOUR-USERNAME/rust-server-manager-clone.git"
+  },
+  "homepage": "https://github.com/YOUR-USERNAME/rust-server-manager-clone#readme",
+  "bugs": {
+    "url": "https://github.com/YOUR-USERNAME/rust-server-manager-clone/issues"
+  },
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "dev": "vite",
+    "clean": "rimraf dist dist-electron release",
+    "build": "npm run clean && tsc -p tsconfig.electron.json && vite build && electron-builder",
+    "electron:dev": "tsc -p tsconfig.electron.json && vite --host & electron .",
+    "typecheck": "tsc --noEmit",
+    "test": "tsc -p tsconfig.electron.json && node --test",
+    "build:web": "vite build"
+  },
+  "dependencies": {
+    "adm-zip": "^0.6.0",
+    "i18next": "^26.3.6",
+    "i18next-browser-languagedetector": "^8.2.1",
+    "lucide-react": "^0.344.0",
+    "pidusage": "^4.0.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-i18next": "^17.0.11",
+    "react-router-dom": "^6.22.3",
+    "ws": "^8.21.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.30",
+    "@types/pidusage": "^2.0.5",
+    "@types/react": "^18.3.1",
+    "@types/react-dom": "^18.3.1",
+    "@types/ws": "^8.18.1",
+    "@vitejs/plugin-react": "^4.2.1",
+    "autoprefixer": "^10.4.18",
+    "electron": "^29.1.0",
+    "electron-builder": "^24.13.3",
+    "postcss": "^8.4.35",
+    "rimraf": "^6.1.3",
+    "tailwind-merge": "^2.2.1",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.2.2",
+    "vite": "^5.1.4"
+  },
+  "build": {
+    "appId": "com.rustservermanager.app",
+    "productName": "Rust Server Manager",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "build/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "icon": "build/icon.ico",
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": false
+    }
+  }
+}

@@ -1,0 +1,39 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-background text-textMain antialiased;
+  font-family: 'Segoe UI', system-ui, -apple-system, Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* Темный скроллбар в стиле приложения */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: #0f1115;
+}
+::-webkit-scrollbar-thumb {
+  background: #232834;
+  border-radius: 6px;
+  border: 2px solid #0f1115;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #2f3644;
+}
+
+::selection {
+  background: rgba(224, 86, 56, 0.35);
+}

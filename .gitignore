@@ -1,0 +1,34 @@
+# Зависимости
+node_modules/
+
+# Сборка
+dist/
+dist-electron/
+release/
+
+# Логи
+*.log
+npm-debug.log*
+
+# Окружение
+.env
+.env.*
+!.env.example
+
+# Редакторы/ОС
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# TS
+*.tsbuildinfo
+
+# Тесты/временные файлы
+coverage/
+tmp_*
+*.tmp
+
+# Установщики / архивы (если собираются локально)
+*.exe.asc
+
