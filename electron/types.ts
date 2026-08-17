@@ -72,7 +72,7 @@ export interface PluginInfo {
   version: string;
   author: string;
   path: string;
-  source: 'oxide' | 'carbon';
+  source: 'oxide';
   sizeBytes: number;
   enabled: boolean;
   /** Oxide ResourceId из заголовка [Info(..., ResourceId = N)]. */
@@ -171,7 +171,7 @@ export type ServerStopResult = {
 export interface PluginsListResult {
   ok: boolean;
   mode: 'real' | 'sim';
-  source?: 'oxide' | 'carbon';
+  source?: 'oxide';
   dir?: string;
   plugins: PluginInfo[];
   error?: 'no-path' | 'no-dir';

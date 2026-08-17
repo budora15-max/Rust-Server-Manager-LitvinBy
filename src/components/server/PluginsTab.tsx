@@ -270,16 +270,9 @@ export function PluginsTab({ server }: { server: RustServer }) {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <span
-            className={cn(
-              'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs',
-              result?.source === 'carbon'
-                ? 'border-purple-500/30 bg-purple-500/10 text-purple-400'
-                : 'border-[#2a2f3a] bg-[#1a1e26] text-textMuted'
-            )}
-          >
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-[#2a2f3a] bg-[#1a1e26] px-3 py-1 text-xs text-textMuted">
             <Plug className="h-3.5 w-3.5" />
-            {result?.source === 'carbon' ? t('plugins.carbon') : t('plugins.oxide')}
+            {t('plugins.oxide')}
           </span>
           <Button
             size="sm"
@@ -363,7 +356,7 @@ export function PluginsTab({ server }: { server: RustServer }) {
                       {plugin.enabled ? t('plugins.enabled') : t('plugins.disabled')}
                     </span>
                     <span className="rounded-full border border-[#2a2f3a] bg-[#1a1e26] px-2 py-0.5 text-xs text-textMuted">
-                      {plugin.source === 'carbon' ? t('plugins.carbon') : t('plugins.oxide')}
+                      {t('plugins.oxide')}
                     </span>
                   </div>
                   <p className="mt-0.5 truncate text-xs text-textMuted">

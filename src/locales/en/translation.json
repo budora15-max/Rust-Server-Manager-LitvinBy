@@ -321,7 +321,6 @@
     "versionBy": "v{{version}} by {{author}}",
     "updateAvailable": "Update: v{{current}} → v{{latest}}",
     "oxide": "Oxide",
-    "carbon": "Carbon",
     "enable": "Enable",
     "disable": "Disable",
     "config": "Config",
@@ -656,7 +655,7 @@
   },
   "mods": {
     "title": "Mod Manager",
-    "hint": "Install or update the modding framework for the server (Oxide/uMod or Carbon). The archive is downloaded from the official source and extracted into the server folder. Stop the server before installing.",
+    "hint": "Install or update the Oxide (uMod) modding framework for the server. The archive is downloaded from the official source and extracted into the server folder. Stop the server before installing.",
     "installPathNeeded": "Set the server install path in the General tab to install mods.",
     "refresh": "Refresh",
     "checking": "Checking…",
@@ -674,7 +673,7 @@
     "latestVersion": "Latest",
     "plugins": "Plugins",
     "removeTitle": "Remove {{mod}}?",
-    "removeMessage": "The framework folder (oxide/ or carbon/) and its files in RustDedicated_Data/Managed will be deleted. Stop the server first.",
+    "removeMessage": "The framework folder (oxide/) and its files in RustDedicated_Data/Managed will be deleted. Stop the server first.",
     "removeConfirm": "Remove"
   }
 }

@@ -38,7 +38,7 @@ import {
   openFirewallPort,
   probeExternal,
 } from './ports';
-import { getModsStatus, installCarbon, installOxide, removeMod, type ModKind } from './mods';
+import { getModsStatus, installOxide, removeMod } from './mods';
 
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
@@ -695,7 +695,7 @@ function registerIpc(): void {
     }
   );
 
-  // --- Плагины Oxide / Carbon ---
+  // --- Плагины Oxide ---
   ipcMain.handle('plugins:list', (_event, server: ServerPayload) => listPlugins(server));
   ipcMain.handle('plugins:delete', (_event, payload: { filePath: string }) =>
     deletePlugin(payload.filePath)
@@ -980,13 +980,9 @@ function registerIpc(): void {
     if (/^https?:\/\//i.test(url)) void shell.openExternal(url);
   });
 
-  // --- Менеджер модов (Oxide / Carbon) ---
+  // --- Менеджер модов (Oxide) ---
   ipcMain.handle('mods:status', (_event, server: ServerPayload) => getModsStatus(server));
-  ipcMain.handle('mods:install', (_event, server: ServerPayload, kind: ModKind) =>
-    kind === 'oxide' ? installOxide(server) : installCarbon(server)
-  );
-  ipcMain.handle('mods:remove', (_event, server: ServerPayload, kind: ModKind) =>
-    removeMod(server, kind)
-  );
+  ipcMain.handle('mods:install', (_event, server: ServerPayload) => installOxide(server));
+  ipcMain.handle('mods:remove', (_event, server: ServerPayload) => removeMod(server));
 }
 

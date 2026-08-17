@@ -52,9 +52,8 @@ export function listPlugins(server: ServerPayload): PluginsListResult {
     };
   }
 
-  const dirs: Array<{ source: 'oxide' | 'carbon'; dir: string }> = [
+  const dirs: Array<{ source: 'oxide'; dir: string }> = [
     { source: 'oxide', dir: path.join(idDir, 'oxide', 'plugins') },
-    { source: 'carbon', dir: path.join(server.installPath, 'carbon', 'plugins') },
   ];
 
   const plugins: PluginInfo[] = [];
@@ -91,7 +90,7 @@ export function listPlugins(server: ServerPayload): PluginsListResult {
         fileName: entry.name,
         name: meta?.name ?? base,
         version: meta?.version ?? (isDll ? 'dll' : '?'),
-        author: meta?.author ?? (isDll ? 'Carbon' : 'Unknown'),
+        author: meta?.author ?? 'Unknown',
         resourceId: meta?.resourceId,
         path: filePath,
         source,
@@ -226,8 +225,8 @@ export async function checkPluginUpdates(
 export async function updatePlugin(
   plugin: PluginInfo
 ): Promise<{ ok: boolean; error?: string; message?: string }> {
-  if (plugin.source === 'carbon' || plugin.fileName.toLowerCase().endsWith('.dll')) {
-    return { ok: false, error: 'Carbon (.dll) plugins cannot be auto-updated from uMod.' };
+  if (plugin.fileName.toLowerCase().endsWith('.dll')) {
+    return { ok: false, error: 'Compiled (.dll) plugins cannot be auto-updated from uMod.' };
   }
 
   const info = await getLatestPluginInfo(plugin.name);
@@ -313,18 +312,14 @@ export function setPluginEnabled(
   }
 }
 
-/** Чтение JSON-конфига плагина (Oxide config, Carbon configs). */
+/** Чтение JSON-конфига плагина Oxide. */
 export function readPluginConfig(
   server: ServerPayload,
   pluginName: string
 ): { ok: boolean; path?: string; config?: Record<string, unknown>; error?: string } {
   const idDir = identityDir(server);
   if (!idDir) return { ok: false, error: 'Install path not set.' };
-  const candidates = [
-    path.join(idDir, 'oxide', 'config', `${pluginName}.json`),
-    path.join(idDir, 'carbon', 'configs', `${pluginName}.json`),
-    path.join(server.installPath, 'carbon', 'configs', `${pluginName}.json`),
-  ];
+  const candidates = [path.join(idDir, 'oxide', 'config', `${pluginName}.json`)];
   for (const p of candidates) {
     if (fs.existsSync(p)) {
       try {

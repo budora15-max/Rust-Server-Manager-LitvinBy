@@ -6,7 +6,6 @@ import type {
   FirewallRuleStatus,
   MetricSample,
   MarketplacePlugin,
-  ModKind,
   ModsStatusResult,
   NotificationEntry,
   PluginInfo,
@@ -223,11 +222,8 @@ declare global {
       openExternal: (url: string) => Promise<void>;
 
       modsStatus: (server: RustServer) => Promise<ModsStatusResult>;
-      modsInstall: (server: RustServer, kind: ModKind) => Promise<ModStatus>;
-      modsRemove: (
-        server: RustServer,
-        kind: ModKind
-      ) => Promise<{ ok: boolean; error?: string }>;
+      modsInstall: (server: RustServer) => Promise<ModStatus>;
+      modsRemove: (server: RustServer) => Promise<{ ok: boolean; error?: string }>;
 
       tasksList: () => Promise<ScheduledTask[]>;
       tasksAddRestart: (input: RestartScheduleInput) => Promise<ScheduledTask[]>;

@@ -45,7 +45,7 @@ export interface User {
   registeredAt: string;
 }
 
-export type PluginSource = 'oxide' | 'carbon';
+export type PluginSource = 'oxide';
 
 export interface PluginInfo {
   id: string;
@@ -258,9 +258,7 @@ export interface ExternalProbeResult {
   error?: string;
 }
 
-// --- Менеджер модов (Oxide / Carbon) ---
-
-export type ModKind = 'oxide' | 'carbon';
+// --- Менеджер модов (Oxide) ---
 
 export interface ModStatus {
   installed: boolean;
@@ -272,7 +270,6 @@ export interface ModStatus {
 
 export interface ModsStatusResult {
   oxide: ModStatus;
-  carbon: ModStatus;
 }
 
 // --- Telegram-уведомления ---

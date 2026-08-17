@@ -79,7 +79,7 @@ const api = {
     };
   },
 
-  // --- Плагины Oxide / Carbon ---
+  // --- Плагины Oxide ---
   pluginsList: (server: unknown) => ipcRenderer.invoke('plugins:list', server),
   pluginsDelete: (filePath: string) => ipcRenderer.invoke('plugins:delete', { filePath }),
   pluginsUpdate: (plugin: unknown) => ipcRenderer.invoke('plugins:update', { plugin }),
@@ -222,12 +222,10 @@ const api = {
   // --- Открытие внешних ссылок в браузере по умолчанию ---
   openExternal: (url: string) => ipcRenderer.invoke('shell:open-external', url),
 
-  // --- Менеджер модов (Oxide / Carbon) ---
+  // --- Менеджер модов (Oxide) ---
   modsStatus: (server: unknown) => ipcRenderer.invoke('mods:status', server),
-  modsInstall: (server: unknown, kind: 'oxide' | 'carbon') =>
-    ipcRenderer.invoke('mods:install', server, kind),
-  modsRemove: (server: unknown, kind: 'oxide' | 'carbon') =>
-    ipcRenderer.invoke('mods:remove', server, kind),
+  modsInstall: (server: unknown) => ipcRenderer.invoke('mods:install', server),
+  modsRemove: (server: unknown) => ipcRenderer.invoke('mods:remove', server),
 
   // --- Системные ---
   pickFolder: () => ipcRenderer.invoke('dialog:pick-folder'),

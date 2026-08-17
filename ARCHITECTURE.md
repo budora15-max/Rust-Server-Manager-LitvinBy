@@ -22,9 +22,9 @@ Electron-приложение с двумя процессами:
 | `tasks.ts` | Общий планировщик: перезапуски, предупреждения, автобэкапы, авторазбаны |
 | `wipe.ts` | Выполнение вайпа (`.map`/`.db`, новый сид) |
 | `backup.ts` | Бэкапы мира (создание/список/восстановление/удаление) |
-| `plugins.ts` | Сканирование Oxide/Carbon, обновление с uMod, вкл/выкл, конфиги |
+| `plugins.ts` | Сканирование Oxide, обновление с uMod, вкл/выкл, конфиги |
 | `marketplace.ts` | Каталог и поиск по uMod (search.json + точный slug) |
-| `mods.ts` | Установка/удаление фреймворков Oxide/Carbon (ZIP, adm-zip) |
+| `mods.ts` | Установка/удаление фреймворка Oxide (uMod) (ZIP, adm-zip) |
 | `config.ts` | Чтение/запись/санитизация `server.cfg` |
 | `steamcmd.ts` | Обновление серверной части через SteamCMD |
 | `ports.ts` | Статусы портов (netstat/tasklist), Windows Firewall (UAC), TCP-пробы |

@@ -1,28 +1,24 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Boxes, Download, RefreshCw, Trash2, Zap } from 'lucide-react';
-import type { ModKind, ModStatus, ModsStatusResult, RustServer } from '@/types';
+import type { ModStatus, RustServer } from '@/types';
 import { Button } from '@/components/Button';
 import { ConfirmModal } from '@/components/ConfirmModal';
-import { cn } from '@/lib/utils';
 
 interface ModsTabProps {
   server: RustServer;
 }
 
-const MOD_META: Record<ModKind, { name: string; color: string }> = {
-  oxide: { name: 'Oxide (uMod)', color: 'text-accent' },
-  carbon: { name: 'Carbon', color: 'text-sky-400' },
-};
+const MOD_NAME = 'Oxide (uMod)';
 
 export function ModsTab({ server }: ModsTabProps) {
   const bridge = window.rustManager;
   const { t } = useTranslation();
 
-  const [status, setStatus] = useState<ModsStatusResult | null>(null);
+  const [status, setStatus] = useState<ModStatus | null>(null);
   const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState<ModKind | null>(null);
-  const [confirmRemove, setConfirmRemove] = useState<ModKind | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
 
@@ -40,7 +36,8 @@ export function ModsTab({ server }: ModsTabProps) {
     setLoading(true);
     setError('');
     try {
-      setStatus(await bridge.modsStatus(server));
+      const res = await bridge.modsStatus(server);
+      setStatus(res.oxide);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -52,117 +49,43 @@ export function ModsTab({ server }: ModsTabProps) {
     void load();
   }, [load]);
 
-  const install = async (kind: ModKind) => {
+  const install = async () => {
     if (!bridge) return;
-    setBusy(kind);
+    setBusy(true);
     setError('');
     try {
-      const res = await bridge.modsInstall(server, kind);
+      const res = await bridge.modsInstall(server);
       if (res.installed) {
-        flash(t('mods.installed', { mod: MOD_META[kind].name, version: res.remoteVersion ?? '' }));
+        flash(t('mods.installed', { mod: MOD_NAME, version: res.remoteVersion ?? '' }));
       } else {
-        flash(res.error ?? t('mods.installFailed'), true);
+        flash(res.error ?? t('mods.installFailed', { error: res.error ?? '' }), true);
       }
       await load();
     } catch (e) {
       flash(e instanceof Error ? e.message : String(e), true);
     } finally {
-      setBusy(null);
+      setBusy(false);
     }
   };
 
   const doRemove = async () => {
     if (!confirmRemove || !bridge) return;
-    const kind = confirmRemove;
-    setBusy(kind);
+    setBusy(true);
     setError('');
     try {
-      const res = await bridge.modsRemove(server, kind);
-      if (res.ok) flash(t('mods.removed', { mod: MOD_META[kind].name }));
+      const res = await bridge.modsRemove(server);
+      if (res.ok) flash(t('mods.removed', { mod: MOD_NAME }));
       else flash(res.error ?? t('mods.removeFailed'), true);
       await load();
     } catch (e) {
       flash(e instanceof Error ? e.message : String(e), true);
     } finally {
-      setBusy(null);
-      setConfirmRemove(null);
+      setBusy(false);
+      setConfirmRemove(false);
     }
   };
 
-  const renderCard = (kind: ModKind) => {
-    const meta = MOD_META[kind];
-    const st: ModStatus | undefined = status?.[kind];
-    const installed = !!st?.installed;
-    const isBusy = busy === kind;
-
-    return (
-      <div key={kind} className="rounded-xl border border-[#232833] bg-surface p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div
-              className={cn(
-                'flex h-10 w-10 items-center justify-center rounded-lg bg-[#1a1e26]',
-                meta.color
-              )}
-            >
-              <Boxes className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="font-semibold text-textMain">{meta.name}</p>
-              <p className="text-xs text-textMuted">
-                {installed
-                  ? st.localVersion
-                    ? `${t('mods.installedVersion')}: ${st.localVersion}`
-                    : t('mods.installedTag')
-                  : t('mods.notInstalled')}
-              </p>
-            </div>
-          </div>
-          <span
-            className={cn(
-              'shrink-0 rounded-full border px-2.5 py-0.5 text-xs font-semibold',
-              installed
-                ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
-                : 'border-slate-500/30 bg-slate-500/10 text-slate-400'
-            )}
-          >
-            {installed ? t('mods.installedTag') : t('mods.notInstalled')}
-          </span>
-        </div>
-
-        <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
-          <div className="rounded-lg bg-[#1a1e26] p-3">
-            <p className="text-xs text-textMuted">{t('mods.latestVersion')}</p>
-            <p className="mt-0.5 font-semibold text-textMain">{st?.remoteVersion ?? '—'}</p>
-          </div>
-          <div className="rounded-lg bg-[#1a1e26] p-3">
-            <p className="text-xs text-textMuted">{t('mods.plugins')}</p>
-            <p className="mt-0.5 font-semibold text-textMain">{st?.pluginCount ?? 0}</p>
-          </div>
-        </div>
-
-        <div className="mt-4 flex items-center gap-2">
-          <Button
-            loading={isBusy}
-            disabled={!bridge || !server.installPath}
-            onClick={() => void install(kind)}
-          >
-            <Download className="h-4 w-4" />
-            {installed ? t('mods.update') : t('mods.install')}
-          </Button>
-          <Button
-            variant="danger"
-            disabled={!installed || isBusy || !bridge}
-            onClick={() => setConfirmRemove(kind)}
-          >
-            <Trash2 className="h-4 w-4" /> {t('mods.remove')}
-          </Button>
-        </div>
-
-        {st?.error && <p className="mt-2 text-xs text-red-400">{st.error}</p>}
-      </div>
-    );
-  };
+  const installed = !!status?.installed;
 
   if (!bridge) {
     return (
@@ -205,25 +128,78 @@ export function ModsTab({ server }: ModsTabProps) {
         </p>
       )}
 
-      <div className="mt-4 grid gap-4 md:grid-cols-2">
+      <div className="mt-4 max-w-xl">
         {loading && !status ? (
-          <p className="col-span-full py-10 text-center text-sm text-textMuted">{t('mods.checking')}</p>
+          <p className="py-10 text-center text-sm text-textMuted">{t('mods.checking')}</p>
         ) : (
-          <>
-            {renderCard('oxide')}
-            {renderCard('carbon')}
-          </>
+          <div className="rounded-xl border border-[#232833] bg-surface p-5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#1a1e26] text-accent">
+                  <Boxes className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="font-semibold text-textMain">{MOD_NAME}</p>
+                  <p className="text-xs text-textMuted">
+                    {installed ? t('mods.installedTag') : t('mods.notInstalled')}
+                  </p>
+                </div>
+              </div>
+              <span
+                className={`shrink-0 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${
+                  installed
+                    ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
+                    : 'border-slate-500/30 bg-slate-500/10 text-slate-400'
+                }`}
+              >
+                {installed ? t('mods.installedTag') : t('mods.notInstalled')}
+              </span>
+            </div>
+
+            <div className="mt-4 grid grid-cols-3 gap-3">
+              <div className="rounded-lg bg-[#1a1e26] p-3">
+                <p className="text-xs text-textMuted">{t('mods.installedVersion')}</p>
+                <p className="mt-0.5 font-semibold text-textMain">{status?.localVersion ?? '—'}</p>
+              </div>
+              <div className="rounded-lg bg-[#1a1e26] p-3">
+                <p className="text-xs text-textMuted">{t('mods.latestVersion')}</p>
+                <p className="mt-0.5 font-semibold text-textMain">{status?.remoteVersion ?? '—'}</p>
+              </div>
+              <div className="rounded-lg bg-[#1a1e26] p-3">
+                <p className="text-xs text-textMuted">{t('mods.plugins')}</p>
+                <p className="mt-0.5 font-semibold text-textMain">{status?.pluginCount ?? 0}</p>
+              </div>
+            </div>
+
+            <div className="mt-4 flex items-center gap-2">
+              <Button
+                loading={busy}
+                disabled={!bridge || !server.installPath}
+                onClick={() => void install()}
+              >
+                <Download className="h-4 w-4" />
+                {installed ? t('mods.update') : t('mods.install')}
+              </Button>
+              <Button
+                variant="danger"
+                disabled={!installed || busy || !bridge}
+                onClick={() => setConfirmRemove(true)}
+              >
+                <Trash2 className="h-4 w-4" /> {t('mods.remove')}
+              </Button>
+            </div>
+
+            {status?.error && <p className="mt-2 text-xs text-red-400">{status.error}</p>}
+          </div>
         )}
       </div>
 
       <ConfirmModal
-        open={confirmRemove !== null}
-        title={t('mods.removeTitle', {
-          mod: confirmRemove ? MOD_META[confirmRemove].name : '',
-        })}
+        open={confirmRemove}
+        title={t('mods.removeTitle', { mod: MOD_NAME })}
         message={t('mods.removeMessage')}
         confirmLabel={t('mods.removeConfirm')}
-        onCancel={() => setConfirmRemove(null)}
+        onCancel={() => setConfirmRemove(false)}
         onConfirm={() => void doRemove()}
       />
     </div>
