@@ -92,12 +92,22 @@ export function MetricsProvider({ children }: { children: ReactNode }) {
   return <MetricsContext.Provider value={history}>{children}</MetricsContext.Provider>;
 }
 
-/** Последние метрики по каждому серверу. */
+/** Последние метрики по каждому серверу.
+ * Отдаём сэмпл только для «живых» серверов (online/starting/sim):
+ * когда сервер остановлен или упал, последний сэмпл прошлой сессии
+ * остаётся в истории и без этой фильтрации выглядит как текущая нагрузка.
+ */
 export function useMetrics(): Record<string, MetricSample> {
   const history = useContext(MetricsContext);
+  const { servers } = useServer();
   const latest: Record<string, MetricSample> = {};
   for (const [id, arr] of Object.entries(history)) {
-    if (arr.length > 0) latest[id] = arr[arr.length - 1];
+    if (arr.length === 0) continue;
+    const server = servers.find((s) => s.id === id);
+    const live =
+      server?.status === 'online' || server?.status === 'starting' || server?.status === 'sim';
+    if (!live) continue;
+    latest[id] = arr[arr.length - 1];
   }
   return latest;
 }

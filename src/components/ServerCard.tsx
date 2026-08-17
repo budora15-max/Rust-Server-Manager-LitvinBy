@@ -29,12 +29,14 @@ export function ServerCard({ server }: { server: RustServer }) {
   const maxPlayers = sample?.maxPlayers ?? server.maxPlayers;
   const playersPct = maxPlayers > 0 ? Math.round((onlinePlayers / maxPlayers) * 100) : 0;
 
-  const cpu = sample?.cpu ?? server.cpu;
-  const ramPct = sample
-    ? Math.min(100, Math.round((sample.memoryMb / 8192) * 100))
-    : server.ram;
-  const ramText = sample ? `${sample.memoryMb} MB` : `${server.ram}%`;
-  const uptime = sample?.uptimeSeconds ?? server.uptimeSeconds;
+  // Метрики процесса показываем только для живого сервера: когда сервер
+  // остановлен/упал, последний сэмпл прошлой сессии выдавать нельзя —
+  // он выглядит как текущая нагрузка, хотя процесса уже нет.
+  const liveMetrics = online && sample !== undefined;
+  const cpu = liveMetrics ? sample.cpu : 0;
+  const ramPct = liveMetrics ? Math.min(100, Math.round((sample.memoryMb / 8192) * 100)) : 0;
+  const ramText = liveMetrics ? `${sample.memoryMb} MB` : '0 MB';
+  const uptime = liveMetrics ? sample.uptimeSeconds : 0;
 
   const runAction = () => {
     if (!confirm) return;
