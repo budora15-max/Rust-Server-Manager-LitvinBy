@@ -16,7 +16,7 @@
     "react"
   ],
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "repository": {
     "type": "git",
@@ -30,7 +30,7 @@
   "scripts": {
     "dev": "vite",
     "clean": "rimraf dist dist-electron release",
-    "build": "npm run clean && tsc -p tsconfig.electron.json && vite build && electron-builder",
+    "build": "npm run clean && tsc -p tsconfig.electron.json && vite build && electron-builder --publish never",
     "electron:dev": "tsc -p tsconfig.electron.json && vite --host & electron .",
     "typecheck": "tsc --noEmit",
     "test": "tsc -p tsconfig.electron.json && node --test",
