@@ -37,6 +37,7 @@ import type { SteamUpdateProgress } from '@/types';
 import { GeneralTab } from '@/components/server/GeneralTab';
 import { ConsoleTab } from '@/components/server/ConsoleTab';
 import { MapTab } from '@/components/server/MapTab';
+import { SystemMemoryPanel } from '@/components/server/SystemMemoryPanel';
 import { PlayersTab } from '@/components/server/PlayersTab';
 import { PluginsTab } from '@/components/server/PluginsTab';
 import { WipesTab } from '@/components/server/WipesTab';
@@ -417,33 +418,36 @@ function ServerMetrics({ serverId }: { serverId: string }) {
   const playersMax = sample?.maxPlayers ?? 100;
 
   return (
-    <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-      <MetricsChart
-        label={t('serverPage.metrics.players')}
-        value={`${sample?.onlinePlayers ?? 0} / ${playersMax}`}
-        data={history.map((h) => h.onlinePlayers)}
-        max={playersMax}
-        color="#34d399"
-      />
-      <MetricsChart
-        label={t('serverPage.metrics.fps')}
-        value={String(sample?.fps ?? 0)}
-        data={history.map((h) => h.fps)}
-        max={120}
-        color="#38bdf8"
-      />
-      <MetricsChart
-        label={t('serverPage.metrics.cpu')}
-        value={`${sample?.cpu ?? 0}%`}
-        data={history.map((h) => h.cpu)}
-        color="#e05638"
-      />
-      <MetricsChart
-        label={t('serverPage.metrics.ram')}
-        value={sample ? `${sample.memoryMb} MB` : '—'}
-        data={history.map((h) => h.memoryMb)}
-        color="#a78bfa"
-      />
-    </div>
+    <>
+      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <MetricsChart
+          label={t('serverPage.metrics.players')}
+          value={`${sample?.onlinePlayers ?? 0} / ${playersMax}`}
+          data={history.map((h) => h.onlinePlayers)}
+          max={playersMax}
+          color="#34d399"
+        />
+        <MetricsChart
+          label={t('serverPage.metrics.fps')}
+          value={String(sample?.fps ?? 0)}
+          data={history.map((h) => h.fps)}
+          max={120}
+          color="#38bdf8"
+        />
+        <MetricsChart
+          label={t('serverPage.metrics.cpu')}
+          value={`${sample?.cpu ?? 0}%`}
+          data={history.map((h) => h.cpu)}
+          color="#e05638"
+        />
+        <MetricsChart
+          label={t('serverPage.metrics.ram')}
+          value={sample ? `${sample.memoryMb} MB` : '—'}
+          data={history.map((h) => h.memoryMb)}
+          color="#a78bfa"
+        />
+      </div>
+      <SystemMemoryPanel serverMb={sample?.memoryMb ?? 0} />
+    </>
   );
 }

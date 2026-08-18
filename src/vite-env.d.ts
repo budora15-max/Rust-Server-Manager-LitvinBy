@@ -64,6 +64,7 @@ declare global {
 
       metricsLast: (serverId: string) => Promise<MetricSample | undefined>;
       onMetrics: (callback: (sample: MetricSample) => void) => () => void;
+      systemMemory: () => Promise<{ totalMb: number; usedMb: number; freeMb: number }>;
 
       rconConnect: (payload: {
         serverId: string;

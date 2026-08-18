@@ -161,6 +161,14 @@
       "cpu": "CPU",
       "ram": "RAM"
     },
+    "memory": {
+      "title": "Память",
+      "server": "Сервер",
+      "systemUsed": "Занято системой",
+      "total": "Всего RAM",
+      "usedOfTotal": "{{used}} из {{total}}",
+      "gb": "{{value}} ГБ"
+    },
     "map": {
       "refresh": "Обновить",
       "capture": "Снять карту",

@@ -161,6 +161,14 @@
       "cpu": "CPU",
       "ram": "RAM"
     },
+    "memory": {
+      "title": "Memory",
+      "server": "Server",
+      "systemUsed": "Used by system",
+      "total": "Total RAM",
+      "usedOfTotal": "{{used}} of {{total}}",
+      "gb": "{{value}} GB"
+    },
     "map": {
       "refresh": "Refresh",
       "capture": "Capture map",

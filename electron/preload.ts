@@ -62,6 +62,9 @@ const api = {
     };
   },
 
+  // --- Системная память (занято всеми процессами / общий объём) ---
+  systemMemory: () => ipcRenderer.invoke('system:memory'),
+
   // --- WebRcon ---
   rconConnect: (payload: unknown) => ipcRenderer.invoke('rcon:connect', payload),
   rconDisconnect: (serverId: string) => ipcRenderer.invoke('rcon:disconnect', serverId),

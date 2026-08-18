@@ -785,6 +785,17 @@ function registerIpc(): void {
   // --- Телеметрия ---
   ipcMain.handle('metrics:last', (_event, id: string) => metricsCollector.last(id));
 
+  // --- Системная память: занято всеми процессами + общий объём (os) ---
+  ipcMain.handle('system:memory', () => {
+    const total = os.totalmem();
+    const free = os.freemem();
+    return {
+      totalMb: Math.round(total / (1024 * 1024)),
+      usedMb: Math.round((total - free) / (1024 * 1024)),
+      freeMb: Math.round(free / (1024 * 1024)),
+    };
+  });
+
   // --- WebRcon ---
   ipcMain.handle('rcon:connect', (_event, payload: RconConnectPayload) => rconManager.connect(payload));
   ipcMain.handle('rcon:disconnect', (_event, serverId: string) => rconManager.disconnect(serverId));
