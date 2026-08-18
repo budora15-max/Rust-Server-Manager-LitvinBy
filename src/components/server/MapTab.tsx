@@ -29,9 +29,6 @@ export function MapTab({ server }: { server: RustServer }) {
   } | null>(null);
   const [rusteditOpening, setRusteditOpening] = useState(false);
   const [rusteditOpenError, setRusteditOpenError] = useState<string | null>(null);
-  const [extInstalled, setExtInstalled] = useState<boolean | null>(null);
-  const [extBusy, setExtBusy] = useState<'install' | 'remove' | null>(null);
-  const [extMsg, setExtMsg] = useState<string | null>(null);
 
   // Кастомная карта RustEdit (custommap.*.map) в identity-папке сервера.
   useEffect(() => {
@@ -63,58 +60,6 @@ export function MapTab({ server }: { server: RustServer }) {
       setRusteditOpenError(t('serverPage.map.rusteditNotFound'));
     } finally {
       setRusteditOpening(false);
-    }
-  };
-
-  // Статус расширения Oxide.Ext.RustEdit.dll на сервере (нужно для кастомных карт).
-  useEffect(() => {
-    const bridge = window.rustManager;
-    if (!bridge?.rusteditExtensionStatus || !server.installPath) return;
-    let cancelled = false;
-    bridge
-      .rusteditExtensionStatus(server)
-      .then((res) => {
-        if (!cancelled) setExtInstalled(res.installed);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [server]);
-
-  const installExtension = async () => {
-    const bridge = window.rustManager;
-    if (!bridge?.rusteditExtensionInstall) return;
-    setExtBusy('install');
-    setExtMsg(null);
-    try {
-      const res = await bridge.rusteditExtensionInstall(server);
-      if (res.ok) {
-        setExtInstalled(true);
-        setExtMsg(t('serverPage.map.rusteditExtInstallOk'));
-      } else {
-        setExtMsg(t('serverPage.map.rusteditExtInstallErr', { error: res.error }));
-      }
-    } catch {
-      setExtMsg(t('serverPage.map.rusteditExtInstallErr', { error: '?' }));
-    } finally {
-      setExtBusy(null);
-    }
-  };
-
-  const removeExtension = async () => {
-    const bridge = window.rustManager;
-    if (!bridge?.rusteditExtensionRemove) return;
-    setExtBusy('remove');
-    setExtMsg(null);
-    try {
-      const res = await bridge.rusteditExtensionRemove(server);
-      if (res.ok) setExtInstalled(false);
-      else setExtMsg(t('serverPage.map.rusteditExtInstallErr', { error: res.error }));
-    } catch {
-      setExtMsg(t('serverPage.map.rusteditExtInstallErr', { error: '?' }));
-    } finally {
-      setExtBusy(null);
     }
   };
 
@@ -277,52 +222,6 @@ export function MapTab({ server }: { server: RustServer }) {
           {rusteditOpenError && (
             <p className="mt-2 text-xs text-amber-400">{rusteditOpenError}</p>
           )}
-        </div>
-      )}
-
-      {/* Расширение Oxide.Ext.RustEdit.dll — нужно для запуска кастомных карт.
-          Показывается всегда (независимо от наличия кастомной карты). */}
-      {server.installPath && extInstalled !== null && (
-        <div className="mt-4 rounded-xl border border-[#232833] bg-surface p-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="min-w-0">
-              <h3 className="flex items-center gap-1.5 text-sm font-semibold text-textMain">
-                <MapPinned className="h-4 w-4 text-accent" />
-                {t('serverPage.map.rusteditExtTitle')}
-              </h3>
-              <p
-                className={
-                  extInstalled
-                    ? 'mt-0.5 text-xs text-emerald-400'
-                    : 'mt-0.5 text-xs text-amber-400'
-                }
-              >
-                {extInstalled
-                  ? t('serverPage.map.rusteditExtInstalled')
-                  : t('serverPage.map.rusteditExtMissing')}
-              </p>
-            </div>
-            {extInstalled ? (
-              <Button
-                size="sm"
-                variant="danger"
-                loading={extBusy === 'remove'}
-                onClick={() => void removeExtension()}
-              >
-                {t('serverPage.map.rusteditExtRemove')}
-              </Button>
-            ) : (
-              <Button
-                size="sm"
-                variant="primary"
-                loading={extBusy === 'install'}
-                onClick={() => void installExtension()}
-              >
-                {t('serverPage.map.rusteditExtInstall')}
-              </Button>
-            )}
-          </div>
-          {extMsg && <p className="mt-2 text-xs text-textMuted">{extMsg}</p>}
         </div>
       )}
 
