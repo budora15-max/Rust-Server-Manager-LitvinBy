@@ -128,42 +128,45 @@ export function ServerProvider({ children }: { children: ReactNode }) {
     setTimeout(() => setStatus(id, status), ms);
 
   // После перезапуска менеджера PID процессов не переносятся между сессиями.
-  // Сверяем сохранённые статусы с реальным состоянием в main-процессе и в ОС:
-  // «online»/«sim» из прошлой сессии без запущенного процесса — это ложь.
+  // Сверяем сохранённые статусы с реальным состоянием процессов в ОС одним
+  // проходом: серверы, запущенные менеджером в прошлой сессии (или вне менеджера)
+  // и оставшиеся работать после его закрытия, «прикрепляются» обратно — статус
+  // online + externalPid (кнопки управления и метрики снова работают).
+  // «online»/«sim» из прошлой сессии без живого процесса — это ложь → offline.
   useEffect(() => {
     const bridge = window.rustManager;
     if (!bridge) return;
     let cancelled = false;
     (async () => {
       const list = serversRef.current;
-      for (const s of list) {
-        if (s.status === 'offline' || s.status === 'crashed') continue;
+      const withPath = list.filter((s) => s.installPath);
+      let ext: Record<string, number> = {};
+      if (withPath.length > 0) {
         try {
-          const st = await bridge.serverStatus(s.id);
-          if (cancelled) return;
-          if (st.running) {
-            setStatus(s.id, 'online');
-            if (st.pid) setExternalPid(s.id, st.pid);
-            continue;
-          }
-          // Менеджер не знает процесс — проверяем ОС: сервер мог быть запущен
-          // вне менеджера или в прошлой сессии менеджера.
-          if (!s.installPath) {
-            setStatus(s.id, 'offline');
-            continue;
-          }
-          const ext = await bridge.serverDetectExternal([s]);
-          if (cancelled) return;
-          if (ext[s.id]) {
-            setExternalPid(s.id, ext[s.id]);
-            setStatus(s.id, 'online');
-          } else {
-            setStatus(s.id, 'offline');
-          }
+          ext = (await bridge.serverDetectExternal(withPath)) ?? {};
         } catch {
-          // IPC недоступен — оставляем прежний статус
+          ext = {};
         }
       }
+      if (cancelled) return;
+      setServers((prev) =>
+        prev.map((s) => {
+          const pid = ext[s.id];
+          if (pid) {
+            return { ...s, status: 'online' as const, externalPid: pid, lastError: undefined };
+          }
+          if (s.status === 'online' || s.status === 'starting' || s.status === 'sim') {
+            return {
+              ...s,
+              status: 'offline' as const,
+              onlinePlayers: 0,
+              cpu: 0,
+              externalPid: undefined,
+            };
+          }
+          return s;
+        })
+      );
     })();
     return () => {
       cancelled = true;

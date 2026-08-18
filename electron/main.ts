@@ -55,6 +55,43 @@ const DEV_URL = 'http://localhost:3000';
 const TRAY_ICON_FALLBACK =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAALklEQVRjYBh+4EGYxX98mCgD1lgpYMWjBhBpAC5DiNaMHJXImkkyAN0VJGtGdwnD8AYAGZ8z1AAAAABJRU5ErkJggg==';
 
+// ---------------------------------------------------------------------------
+// Настройки приложения (userData/settings.json).
+// ---------------------------------------------------------------------------
+
+interface AppSettings {
+  /** Останавливать ли серверы при полном выходе из менеджера. По умолчанию false:
+   *  серверы продолжают работать («откреплённый» режим) и подхватываются
+   *  менеджером при следующем запуске. */
+  stopServersOnExit: boolean;
+}
+
+const DEFAULT_SETTINGS: AppSettings = { stopServersOnExit: false };
+
+let settings: AppSettings = { ...DEFAULT_SETTINGS };
+
+function settingsFilePath(): string {
+  return path.join(app.getPath('userData'), 'settings.json');
+}
+
+function loadSettings(): void {
+  try {
+    const raw = fs.readFileSync(settingsFilePath(), 'utf8');
+    settings = { ...DEFAULT_SETTINGS, ...(JSON.parse(raw) as Partial<AppSettings>) };
+  } catch {
+    settings = { ...DEFAULT_SETTINGS };
+  }
+}
+
+function saveSettings(): void {
+  try {
+    fs.mkdirSync(path.dirname(settingsFilePath()), { recursive: true });
+    fs.writeFileSync(settingsFilePath(), JSON.stringify(settings, null, 2), 'utf8');
+  } catch {
+    /* нет прав на запись — настройка не критична */
+  }
+}
+
 /** Файл автозапуска на Linux (XDG autostart). */
 function linuxAutostartFile(): string {
   return path.join(os.homedir(), '.config', 'autostart', 'rust-server-manager.desktop');
@@ -140,6 +177,7 @@ function showTrayHintOnce(): void {
 }
 
 app.whenReady().then(() => {
+  loadSettings();
   // AUMID нужен для системных уведомлений на Windows (иначе Notification не показывается).
   app.setAppUserModelId('com.rustservermanager.app');
   initLocale();
@@ -165,7 +203,11 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', () => {
   quitting = true;
-  stopAll();
+  // «Откреплённый» режим: по умолчанию серверы НЕ останавливаются при выходе
+  // менеджера и продолжают работать в фоне. При следующем запуске менеджер
+  // найдёт их по installPath и снова подключится (detectExternalServers).
+  // Включив настройку stopServersOnExit (трей), можно вернуть прежнее поведение.
+  if (settings.stopServersOnExit) stopAll();
   taskScheduler.stop();
   metricsCollector.stopAll();
   rconManager.dispose();
@@ -249,6 +291,16 @@ function createTray(): void {
       },
     },
     { label: ru ? 'Остановить все серверы' : 'Stop all servers', click: () => stopAll() },
+    {
+      label: ru ? 'Останавливать серверы при выходе' : 'Stop servers on exit',
+      id: 'stop-on-exit',
+      type: 'checkbox',
+      checked: settings.stopServersOnExit,
+      click: (item) => {
+        settings.stopServersOnExit = item.checked;
+        saveSettings();
+      },
+    },
     { type: 'separator' },
     {
       label: ru ? 'Выход' : 'Quit',
@@ -712,10 +764,16 @@ function registerIpc(): void {
   // Проверка наличия исполняемого файла сервера в папке установки
   ipcMain.handle('server:find-exe', (_event, installPath: string) => findExecutableInfo(installPath));
 
-  // Обнаружение запущенных в ОС серверов (для честных статусов после рестарта менеджера)
-  ipcMain.handle('server:detect-external', (_event, servers: ServerPayload[]) =>
-    detectExternalServers(servers)
-  );
+  // Обнаружение запущенных в ОС серверов (для честных статусов после рестарта менеджера).
+  // Найденные процессы «прикрепляются» обратно: запускается сбор метрик по их PID.
+  ipcMain.handle('server:detect-external', async (_event, servers: ServerPayload[]) => {
+    const pids = await detectExternalServers(servers);
+    for (const s of servers) {
+      const pid = pids[s.id];
+      if (pid && s.installPath) metricsCollector.start(s, pid);
+    }
+    return pids;
+  });
 
   // Чтение лога сервера из файла (консоль приложения, pull-режим)
   ipcMain.handle(

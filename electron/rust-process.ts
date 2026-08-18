@@ -332,6 +332,17 @@ export function startServer(server: ServerPayload): Promise<ServerStartResult> {
   if (processes.has(server.id)) {
     return Promise.resolve({ success: false, mode: 'real', error: 'Process is already running.' });
   }
+  // Сервер мог быть запущен вне менеджера (или в прошлой сессии менеджера и
+  // остаться работать после его закрытия) — не запускаем второй экземпляр.
+  const externalPid = externalPids.get(server.id);
+  if (externalPid) {
+    try {
+      process.kill(externalPid, 0);
+      return Promise.resolve({ success: false, mode: 'real', error: 'Process is already running.' });
+    } catch {
+      externalPids.delete(server.id);
+    }
+  }
 
   // Чиним cfg перед стартом: значения с пробелами (server.level и др.) без кавычек
   // ломают загрузку сцены Procedural на ряде сборок Rust.
@@ -498,9 +509,9 @@ export function statusOf(id: string): { running: boolean; pid?: number } {
   return { running: false };
 }
 
-/** PID запущенного процесса сервера (для pidusage). */
+/** PID запущенного процесса сервера (для pidusage) — свой или внешний (переподключённый). */
 export function getPid(id: string): number | undefined {
-  return processes.get(id)?.pid;
+  return statusOf(id).pid;
 }
 
 /** Реально ли запущен процесс сервера (свой или внешний). */
