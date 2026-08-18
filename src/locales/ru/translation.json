@@ -189,7 +189,8 @@
     "startConfirm": "Запустить сервер",
     "deleteServerTitle": "Удалить сервер?",
     "deleteServerMessage": "Сервер «{{name}}» будет удалён из менеджера. Файлы на диске не будут затронуты.",
-    "deleteServerConfirm": "Удалить сервер"
+    "deleteServerConfirm": "Удалить сервер",
+    "deleteTypeName": "Введите имя сервера, чтобы подтвердить удаление:"
   },
   "general": {
     "cfgStatus": "server.cfg",

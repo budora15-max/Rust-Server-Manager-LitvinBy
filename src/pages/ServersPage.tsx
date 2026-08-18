@@ -21,6 +21,7 @@ export default function ServersPage() {
   const { t } = useTranslation();
   const [pending, setPending] = useState<PendingAction | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleteConfirmName, setDeleteConfirmName] = useState('');
 
   const target = pending ? servers.find((s) => s.id === pending.id) : undefined;
   const deleteTarget = deleteId ? servers.find((s) => s.id === deleteId) : undefined;
@@ -35,6 +36,7 @@ export default function ServersPage() {
   const handleDelete = () => {
     if (deleteId) removeServer(deleteId);
     setDeleteId(null);
+    setDeleteConfirmName('');
   };
 
   return (
@@ -159,7 +161,10 @@ export default function ServersPage() {
                         <ChevronRight className="h-4 w-4" />
                       </Link>
                       <button
-                        onClick={() => setDeleteId(server.id)}
+                        onClick={() => {
+                          setDeleteId(server.id);
+                          setDeleteConfirmName('');
+                        }}
                         title={t('servers.delete')}
                         className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-textMuted transition-colors hover:bg-red-500/10 hover:text-red-400"
                       >
@@ -195,9 +200,26 @@ export default function ServersPage() {
         title={t('confirm.deleteServerTitle')}
         message={t('confirm.deleteServerMessage', { name: deleteTarget?.name })}
         confirmLabel={t('confirm.deleteServerConfirm')}
-        onCancel={() => setDeleteId(null)}
+        confirmDisabled={deleteConfirmName.trim() !== (deleteTarget?.name ?? '')}
+        onCancel={() => {
+          setDeleteId(null);
+          setDeleteConfirmName('');
+        }}
         onConfirm={handleDelete}
-      />
+      >
+        <label className="block">
+          <span className="mb-1 block text-xs text-textMuted">
+            {t('confirm.deleteTypeName')}
+          </span>
+          <input
+            value={deleteConfirmName}
+            onChange={(e) => setDeleteConfirmName(e.target.value)}
+            placeholder={deleteTarget?.name ?? ''}
+            autoFocus
+            className="w-full rounded-lg border border-[#2a2f3a] bg-[#1a1e26] px-3 py-2 text-sm text-textMain outline-none transition-colors focus:border-red-500/60"
+          />
+        </label>
+      </ConfirmModal>
     </AppShell>
   );
 }

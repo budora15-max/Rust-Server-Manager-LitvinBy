@@ -189,7 +189,8 @@
     "startConfirm": "Start server",
     "deleteServerTitle": "Delete server?",
     "deleteServerMessage": "The server \"{{name}}\" will be removed from the manager. Files on disk will not be touched.",
-    "deleteServerConfirm": "Delete server"
+    "deleteServerConfirm": "Delete server",
+    "deleteTypeName": "Type the server name to confirm deletion:"
   },
   "general": {
     "cfgStatus": "server.cfg",

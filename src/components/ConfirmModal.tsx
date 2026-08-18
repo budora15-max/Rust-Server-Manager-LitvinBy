@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Modal } from './Modal';
@@ -12,6 +13,10 @@ interface ConfirmModalProps {
   cancelLabel?: string;
   danger?: boolean;
   loading?: boolean;
+  /** Дополнительный контент (например, поле ввода имени для подтверждения). */
+  children?: ReactNode;
+  /** Блокировать кнопку подтверждения (например, пока имя не совпало). */
+  confirmDisabled?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -28,6 +33,8 @@ export function ConfirmModal({
   cancelLabel,
   danger = true,
   loading,
+  children,
+  confirmDisabled,
   onConfirm,
   onCancel,
 }: ConfirmModalProps) {
@@ -45,11 +52,17 @@ export function ConfirmModal({
         </div>
         <p className="text-sm leading-relaxed text-textMuted">{message}</p>
       </div>
+      {children && <div className="mt-4">{children}</div>}
       <div className="mt-6 flex justify-end gap-3">
         <Button variant="secondary" onClick={onCancel} disabled={loading}>
           {cancelLabel ?? t('confirm.cancel')}
         </Button>
-        <Button variant={danger ? 'danger' : 'primary'} onClick={onConfirm} loading={loading}>
+        <Button
+          variant={danger ? 'danger' : 'primary'}
+          onClick={onConfirm}
+          loading={loading}
+          disabled={confirmDisabled}
+        >
           {confirmLabel ?? t('confirm.confirm')}
         </Button>
       </div>
