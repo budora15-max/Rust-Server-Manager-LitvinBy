@@ -96,6 +96,14 @@ declare global {
       }>;
       onRconLine: (callback: (event: RconLineEvent) => void) => () => void;
 
+      mapGetPreview: (server: RustServer) => Promise<{
+        ok: boolean;
+        dataUrl?: string;
+        fileName?: string;
+        error?: string;
+      }>;
+      mapCapture: (server: RustServer) => Promise<{ ok: boolean; error?: string }>;
+
       pluginsList: (server: RustServer) => Promise<PluginsListResult>;
       pluginsDelete: (filePath: string) => Promise<{ ok: boolean; error?: string }>;
       pluginsUpdate: (

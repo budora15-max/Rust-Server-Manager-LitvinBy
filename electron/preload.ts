@@ -79,6 +79,10 @@ const api = {
     };
   },
 
+  // --- Карта мира ---
+  mapGetPreview: (server: unknown) => ipcRenderer.invoke('map:get-preview', server),
+  mapCapture: (server: unknown) => ipcRenderer.invoke('map:capture', server),
+
   // --- Плагины Oxide ---
   pluginsList: (server: unknown) => ipcRenderer.invoke('plugins:list', server),
   pluginsDelete: (filePath: string) => ipcRenderer.invoke('plugins:delete', { filePath }),

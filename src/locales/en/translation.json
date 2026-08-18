@@ -119,6 +119,7 @@
     "tabs": {
       "general": "General",
       "console": "Console",
+      "map": "Map",
       "players": "Players",
       "plugins": "Plugins",
       "mods": "Mods",
@@ -159,6 +160,16 @@
       "fps": "Server FPS",
       "cpu": "CPU",
       "ram": "RAM"
+    },
+    "map": {
+      "refresh": "Refresh",
+      "capture": "Capture map (write.png)",
+      "captured": "Screenshot requested — the preview will refresh in a few seconds.",
+      "empty": "No map preview yet.",
+      "emptyHint": "Start the server and press \"Capture map\" — the write.png command saves the map image into server/<identity>/.",
+      "offline": "Server is not running — start it first.",
+      "noInstall": "Server install folder is not set — map preview is unavailable.",
+      "error": "Failed to load map: {{error}}"
     }
   },
   "confirm": {

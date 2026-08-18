@@ -735,6 +735,44 @@ function registerIpc(): void {
   );
   ipcMain.handle('rcon:status', () => rconManager.status());
 
+  // --- Карта мира: превью (PNG, создаваемая игрой или командой write.png) ---
+  ipcMain.handle('map:get-preview', (_event, server: ServerPayload) => {
+    if (!server.installPath) return { ok: false, error: 'no-install-path' };
+    // Ищем самый свежий PNG/JPG в server/<identity>/map и server/<identity>.
+    const candidates = [
+      path.join(server.installPath, 'server', server.identity, 'map'),
+      path.join(server.installPath, 'server', server.identity),
+    ];
+    try {
+      for (const dir of candidates) {
+        if (!fs.existsSync(dir)) continue;
+        const files = fs
+          .readdirSync(dir)
+          .filter((f) => /\.(png|jpe?g)$/i.test(f))
+          .map((name) => ({ name, file: path.join(dir, name) }))
+          .sort((a, b) => fs.statSync(b.file).mtimeMs - fs.statSync(a.file).mtimeMs);
+        if (files.length === 0) continue;
+        const buf = fs.readFileSync(files[0].file);
+        const isJpg = /\.jpe?g$/i.test(files[0].name);
+        return {
+          ok: true,
+          dataUrl: `data:image/${isJpg ? 'jpeg' : 'png'};base64,${buf.toString('base64')}`,
+          fileName: files[0].name,
+        };
+      }
+      return { ok: false, error: 'not-found' };
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
+
+  // Карта мира: запросить актуальный скриншот у работающего сервера (write.png).
+  ipcMain.handle('map:capture', async (_event, server: ServerPayload) => {
+    if (!isProcessRunning(server.id)) return { ok: false, error: 'server-offline' };
+    const ok = await ensureRconSend(server, 'write.png');
+    return ok ? { ok: true } : { ok: false, error: 'rcon-failed' };
+  });
+
   // Список игроков (JSON из команды playerlist)
   ipcMain.handle('rcon:playerlist', async (_event, serverId: string) => {
     if (!rconManager.isConnected(serverId)) return { ok: false, error: 'Not connected' };

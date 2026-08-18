@@ -12,6 +12,7 @@ import {
   Eraser,
   FileText,
   FlaskConical,
+  Map,
   Package,
   Play,
   Plug,
@@ -35,6 +36,7 @@ import { cn } from '@/lib/utils';
 import type { SteamUpdateProgress } from '@/types';
 import { GeneralTab } from '@/components/server/GeneralTab';
 import { ConsoleTab } from '@/components/server/ConsoleTab';
+import { MapTab } from '@/components/server/MapTab';
 import { PlayersTab } from '@/components/server/PlayersTab';
 import { PluginsTab } from '@/components/server/PluginsTab';
 import { WipesTab } from '@/components/server/WipesTab';
@@ -50,6 +52,7 @@ import { MarketplaceTab } from '@/components/server/MarketplaceTab';
 type Tab =
   | 'general'
   | 'console'
+  | 'map'
   | 'players'
   | 'plugins'
   | 'mods'
@@ -66,6 +69,7 @@ type TabDef = { id: Tab; labelKey: string; Icon: typeof Settings };
 const TABS: TabDef[] = [
   { id: 'general', labelKey: 'serverPage.tabs.general', Icon: Settings },
   { id: 'console', labelKey: 'serverPage.tabs.console', Icon: Terminal },
+  { id: 'map', labelKey: 'serverPage.tabs.map', Icon: Map },
   { id: 'players', labelKey: 'serverPage.tabs.players', Icon: Users },
   { id: 'plugins', labelKey: 'serverPage.tabs.plugins', Icon: Plug },
   { id: 'mods', labelKey: 'serverPage.tabs.mods', Icon: Boxes },
@@ -344,6 +348,7 @@ export default function ServerPage() {
         <GeneralTab server={server} onSave={(patch) => updateServer(server.id, patch)} />
       )}
       {tab === 'console' && <ConsoleTab server={server} />}
+      {tab === 'map' && <MapTab server={server} />}
       {tab === 'players' && <PlayersTab server={server} />}
       {tab === 'plugins' && <PluginsTab server={server} />}
       {tab === 'mods' && <ModsTab server={server} />}
