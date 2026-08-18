@@ -37,6 +37,7 @@
 ### Инфраструктура
 - Трей, автозапуск с Windows, автозапуск серверов вместе с менеджером.
 - Вкладка **«Порты»**: локальный статус портов (кто занял), управление **Windows Firewall** (UAC), TCP-проверка доступности.
+- **Linux**: запуск нативного `RustDedicated`, SteamCMD для Linux (`-beta`), детект процессов через `ps`, порты через `netstat -tunlp`/`ss`, автозапуск через XDG `.desktop`, сборка AppImage/deb в CI.
 - Экспорт/импорт конфигурации сервера, локализация **RU/EN**.
 
 ## Технологии
@@ -67,7 +68,7 @@ npm test               # tsc electron + node --test (модульные тест
 npm run build
 ```
 
-> Требуется Node.js 18+ и Windows (для полной функциональности: процессы Rust, Firewall, SteamCMD).
+> Требуется Node.js 20+ и Windows или Linux (управление Windows Firewall — только на Windows).
 
 ## Структура проекта
 

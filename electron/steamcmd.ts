@@ -5,7 +5,10 @@ import { spawn } from 'child_process';
 import { httpGet } from './http';
 import type { ServerPayload } from './types';
 
-const STEAMCMD_URL = 'https://steamcdn-a.akamaihd.net/client/installer/steamcmd.zip';
+const IS_WIN = process.platform === 'win32';
+const STEAMCMD_URL = IS_WIN
+  ? 'https://steamcdn-a.akamaihd.net/client/installer/steamcmd.zip'
+  : 'https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz';
 const RUST_APP_ID = '258550';
 
 export type UpdateEmitter = (message: string, pct?: number) => void;
@@ -15,25 +18,27 @@ function steamcmdDir(): string {
 }
 
 function steamcmdExe(): string {
-  return path.join(steamcmdDir(), 'steamcmd.exe');
+  return path.join(steamcmdDir(), IS_WIN ? 'steamcmd.exe' : 'steamcmd.sh');
 }
 
-function extractZip(zipPath: string, dest: string): Promise<void> {
+function extractArchive(archivePath: string, dest: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    const ps = spawn(
-      'powershell.exe',
-      [
-        '-NoProfile',
-        '-NonInteractive',
-        '-Command',
-        `Expand-Archive -LiteralPath '${zipPath}' -DestinationPath '${dest}' -Force`,
-      ],
-      { windowsHide: true }
-    );
-    ps.on('error', reject);
-    ps.on('close', (code) => {
+    const cmd = IS_WIN
+      ? spawn(
+          'powershell.exe',
+          [
+            '-NoProfile',
+            '-NonInteractive',
+            '-Command',
+            `Expand-Archive -LiteralPath '${archivePath}' -DestinationPath '${dest}' -Force`,
+          ],
+          { windowsHide: true }
+        )
+      : spawn('tar', ['-xzf', archivePath, '-C', dest]);
+    cmd.on('error', reject);
+    cmd.on('close', (code) => {
       if (code === 0) resolve();
-      else reject(new Error(`Expand-Archive failed with code ${code}`));
+      else reject(new Error(`Archive extraction failed with code ${code}`));
     });
   });
 }
@@ -47,15 +52,15 @@ async function ensureSteamCmd(emit: UpdateEmitter): Promise<string> {
   fs.mkdirSync(dir, { recursive: true });
   emit('SteamCMD not found — downloading…', 0);
 
-  const zipPath = path.join(dir, 'steamcmd.zip');
+  const archivePath = path.join(dir, IS_WIN ? 'steamcmd.zip' : 'steamcmd_linux.tar.gz');
   const res = await httpGet(STEAMCMD_URL);
   if (res.status !== 200) {
     throw new Error(`SteamCMD download failed with HTTP ${res.status}`);
   }
-  fs.writeFileSync(zipPath, res.body);
+  fs.writeFileSync(archivePath, res.body);
   emit('Extracting SteamCMD…', 5);
-  await extractZip(zipPath, dir);
-  fs.unlinkSync(zipPath);
+  await extractArchive(archivePath, dir);
+  fs.unlinkSync(archivePath);
   return steamcmdExe();
 }
 

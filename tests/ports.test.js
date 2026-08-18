@@ -1,7 +1,7 @@
 // Тесты модуля портов (формирование списка + парсинг netstat/tasklist).
 const { test } = require('node:test');
 const assert = require('node:assert');
-const { serverPorts, parseNetstatText, parseTasklistText } = require('../dist-electron/ports.js');
+const { serverPorts, parseNetstatText, parseNetstatLinuxText, parseTasklistText } = require('../dist-electron/ports.js');
 
 function makeServer(port = 28015, rconPort = 28017) {
   return {
@@ -55,6 +55,26 @@ test('parseNetstatText: TCP LISTENING vs TIME_WAIT, UDP', () => {
   assert.ok(udp && udp.pid === 5678 && udp.listening === true, 'UDP parsed as listening');
   const tcpWait = map.get('TCP:28015');
   assert.ok(tcpWait && tcpWait.listening === false, 'TIME_WAIT is not listening');
+});
+
+test('serverPorts: custom queryport', () => {
+  const ports = serverPorts({ ...makeServer(), queryport: 30002 });
+  assert.strictEqual(ports.find((p) => p.key === 'query').port, 30002);
+});
+
+test('parseNetstatLinuxText: netstat -tunlp', () => {
+  const text = [
+    'Proto Recv-Q Send-Q Local Address           Foreign Address         State       PID/Program name',
+    'tcp        0      0 0.0.0.0:28017           0.0.0.0:*               LISTEN      4321/RustDedicated',
+    'udp        0      0 0.0.0.0:28015           0.0.0.0:*                           5678/RustDedicated',
+    'udp        0      0 0.0.0.0:28016           0.0.0.0:*                           -',
+  ].join('\n');
+  const map = parseNetstatLinuxText(text);
+  const tcp = map.get('TCP:28017');
+  assert.ok(tcp && tcp.pid === 4321 && tcp.listening === true, 'TCP parsed');
+  const udp = map.get('UDP:28015');
+  assert.ok(udp && udp.pid === 5678 && udp.listening === true, 'UDP parsed');
+  assert.ok(!map.has('UDP:28016'), 'no PID (root required) → not attributed');
 });
 
 test('parseTasklistText: PID → process name', () => {

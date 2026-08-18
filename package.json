@@ -31,6 +31,7 @@
     "dev": "vite",
     "clean": "rimraf dist dist-electron release",
     "build": "npm run clean && tsc -p tsconfig.electron.json && vite build && electron-builder --publish never",
+    "build:linux": "npm run clean && tsc -p tsconfig.electron.json && vite build && electron-builder --linux AppImage deb --publish never",
     "electron:dev": "tsc -p tsconfig.electron.json && vite --host & electron .",
     "typecheck": "tsc --noEmit",
     "test": "tsc -p tsconfig.electron.json && node --test",
@@ -84,6 +85,16 @@
       ],
       "icon": "build/icon.ico",
       "signAndEditExecutable": false
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "build/icon.png",
+      "category": "Utility",
+      "maintainer": "RSM Team",
+      "synopsis": "Rust server manager desktop application"
     },
     "nsis": {
       "oneClick": false,

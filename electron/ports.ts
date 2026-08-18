@@ -79,6 +79,29 @@ export function parseNetstatText(text: string): Map<string, { proto: string; pid
   return map;
 }
 
+/**
+ * Парсинг вывода `netstat -tunlp` (Linux). PID виден только при запуске от root;
+ * без прав PID не определяется (порт считается свободным).
+ * Формат: `udp 0 0 0.0.0.0:28015 0.0.0.0:* 1234/RustDedicated` (у tcp между ними — State).
+ */
+export function parseNetstatLinuxText(text: string): Map<string, { proto: string; pid: number; listening: boolean }> {
+  const map = new Map<string, { proto: string; pid: number; listening: boolean }>();
+  for (const line of text.split(/\r?\n/)) {
+    const parts = line.trim().split(/\s+/);
+    if (parts.length < 6) continue;
+    const proto = parts[0].toUpperCase();
+    if (proto !== 'TCP' && proto !== 'UDP') continue;
+    const portMatch = /:(\d+)$/.exec(parts[3]);
+    if (!portMatch) continue;
+    const pidField = proto === 'UDP' ? parts[5] : parts[6];
+    const pid = Number((/\d+/.exec(pidField ?? '') ?? [''])[0]);
+    if (pid > 0 && Number.isFinite(pid)) {
+      map.set(`${proto}:${portMatch[1]}`, { proto, pid, listening: true });
+    }
+  }
+  return map;
+}
+
 /** Парсинг вывода tasklist /fo csv /nh: PID → имя процесса. */
 export function parseTasklistText(text: string): Map<number, string> {
   const map = new Map<number, string>();
@@ -90,6 +113,11 @@ export function parseTasklistText(text: string): Map<number, string> {
 }
 
 async function netstatMap(): Promise<Map<string, { proto: string; pid: number; listening: boolean }>> {
+  if (process.platform !== 'win32') {
+    // Linux: netstat -tunlp (или ss -tulpn как запасной).
+    const out = await execCapture('netstat -tunlp 2>/dev/null || ss -tulpn');
+    return parseNetstatLinuxText(out);
+  }
   const [tcp, udp] = await Promise.all([
     execCapture('netstat -ano -p tcp'),
     execCapture('netstat -ano -p udp'),
@@ -98,6 +126,16 @@ async function netstatMap(): Promise<Map<string, { proto: string; pid: number; l
 }
 
 async function tasklistMap(): Promise<Map<number, string>> {
+  if (process.platform !== 'win32') {
+    // Linux: ps — PID → имя процесса.
+    const out = await execCapture('ps -eo pid=,comm=');
+    const map = new Map<number, string>();
+    for (const line of out.split(/\r?\n/)) {
+      const m = /^\s*(\d+)\s+(\S+)/.exec(line);
+      if (m) map.set(Number(m[1]), m[2]);
+    }
+    return map;
+  }
   return parseTasklistText(await execCapture('tasklist /fo csv /nh'));
 }
 
@@ -130,6 +168,13 @@ export async function getFirewallRule(
   port: number,
   protocol: 'TCP' | 'UDP'
 ): Promise<FirewallRuleStatus> {
+  if (process.platform !== 'win32') {
+    return {
+      exists: false,
+      enabled: false,
+      error: 'Firewall management is available on Windows only (on Linux use iptables/ufw).',
+    };
+  }
   const name = ruleName(server, port, protocol);
   const script = `try { (Get-NetFirewallRule -DisplayName '${name}' -ErrorAction Stop).Enabled.ToString() } catch { 'NOT_FOUND' }`;
   try {
@@ -156,6 +201,13 @@ export async function openFirewallPort(
   port: number,
   protocol: 'TCP' | 'UDP'
 ): Promise<FirewallRuleStatus> {
+  if (process.platform !== 'win32') {
+    return {
+      exists: false,
+      enabled: false,
+      error: 'Firewall management is available on Windows only (on Linux use iptables/ufw).',
+    };
+  }
   const name = ruleName(server, port, protocol);
   const cmd = `netsh advfirewall firewall add rule name="${name}" dir=in action=allow protocol=${protocol} localport=${port}`;
   await runElevated(cmd);
@@ -168,6 +220,13 @@ export async function closeFirewallPort(
   port: number,
   protocol: 'TCP' | 'UDP'
 ): Promise<FirewallRuleStatus> {
+  if (process.platform !== 'win32') {
+    return {
+      exists: false,
+      enabled: false,
+      error: 'Firewall management is available on Windows only (on Linux use iptables/ufw).',
+    };
+  }
   const name = ruleName(server, port, protocol);
   const cmd = `netsh advfirewall firewall delete rule name="${name}"`;
   await runElevated(cmd);

@@ -1,5 +1,6 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, shell, Tray, webContents } from 'electron';
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 import { RconManager } from './rcon';
 import { MetricsCollector } from './metrics';
@@ -46,6 +47,11 @@ let tray: Tray | null = null;
 let quitting = false;
 
 const DEV_URL = 'http://localhost:3000';
+
+/** Файл автозапуска на Linux (XDG autostart). */
+function linuxAutostartFile(): string {
+  return path.join(os.homedir(), '.config', 'autostart', 'rust-server-manager.desktop');
+}
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -915,10 +921,32 @@ function registerIpc(): void {
   });
 
   // --- Автозапуск менеджера с Windows ---
-  ipcMain.handle('app:get-auto-launch', () => ({
-    openAtLogin: app.getLoginItemSettings().openAtLogin,
-  }));
+  ipcMain.handle('app:get-auto-launch', () => {
+    if (process.platform === 'linux') {
+      return { openAtLogin: fs.existsSync(linuxAutostartFile()) };
+    }
+    return { openAtLogin: app.getLoginItemSettings().openAtLogin };
+  });
   ipcMain.handle('app:set-auto-launch', (_event, enabled: boolean) => {
+    if (process.platform === 'linux') {
+      const file = linuxAutostartFile();
+      if (enabled) {
+        fs.mkdirSync(path.dirname(file), { recursive: true });
+        fs.writeFileSync(
+          file,
+          '[Desktop Entry]\n' +
+            'Type=Application\n' +
+            'Name=Rust Server Manager\n' +
+            'Comment=Manage Rust game servers\n' +
+            `Exec=${process.execPath}\n` +
+            'X-GNOME-Autostart-enabled=true\n',
+          'utf8'
+        );
+      } else {
+        fs.rmSync(file, { force: true });
+      }
+      return { ok: true, openAtLogin: enabled };
+    }
     app.setLoginItemSettings({ openAtLogin: enabled, openAsHidden: true });
     return { ok: true, openAtLogin: enabled };
   });

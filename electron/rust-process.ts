@@ -16,7 +16,11 @@ const execFileAsync = promisify(execFile) as (
  * Зависит от способа установки/хостера: официальный SteamCMD-клиент даёт
  * RustDedicatedServer.exe, ряд сборок и панелей — RustDedicated.exe.
  */
-const EXE_NAMES = ['RustDedicatedServer.exe', 'RustDedicated.exe'];
+/** Имена исполняемого файла Rust-сервера: на Windows — .exe, на Linux — нативный бинарник. */
+const EXE_NAMES =
+  process.platform === 'win32'
+    ? ['RustDedicatedServer.exe', 'RustDedicated.exe']
+    : ['RustDedicated', 'RustDedicatedServer'];
 const EXE_LABEL = EXE_NAMES.join(' / ');
 
 /** Разбор дополнительных аргументов запуска с учётом кавычек. */
@@ -30,6 +34,24 @@ function splitArgs(input: string): string[] {
     else if (m[3]) tokens.push(m[3]);
   }
   return tokens;
+}
+
+/** Завершение процесса вместе с дочерними (Windows: taskkill /T; Linux/macOS: процесс-группа). */
+function killProcessTree(pid: number): void {
+  try {
+    if (process.platform === 'win32') {
+      spawn('taskkill', ['/pid', String(pid), '/t', '/f'], { windowsHide: true });
+      return;
+    }
+    // Linux/macOS: сервер запускается с detached: true (отдельная группа), -pid = группа.
+    try {
+      process.kill(-pid, 'SIGTERM');
+    } catch {
+      process.kill(pid, 'SIGTERM');
+    }
+  } catch {
+    // процесс уже завершился или нет прав
+  }
 }
 
 const processes = new Map<string, ChildProcess>();
@@ -167,12 +189,7 @@ function ensureHangTimer(): void {
 
       st.hangKilled = true;
       st.lastLogAt = now; // не убивать повторно в следующем тике
-      try {
-        // taskkill /T убивает и дочерние процессы сервера
-        spawn('taskkill', ['/pid', String(child.pid), '/t', '/f'], { windowsHide: true });
-      } catch {
-        child.kill('SIGTERM');
-      }
+      killProcessTree(child.pid);
       scheduleAutoRestart(meta.server, 'hang');
     }
   }, HANG_CHECK_MS);
@@ -361,6 +378,8 @@ export function startServer(server: ServerPayload): Promise<ServerStartResult> {
     cwd: server.installPath,
     stdio: ['ignore', 'pipe', 'pipe'],
     windowsHide: false,
+    // На Linux отдельная группа процессов — killProcessTree(-pid) завершит всё дерево.
+    detached: process.platform !== 'win32',
   });
   // Метаданные записываем сразу — forwardProcessLog/appendToLogFile используют
   // их для определения пути файла лога.
@@ -439,12 +458,7 @@ export function stopServer(id: string): ServerStopResult {
       st.restartWindowStart = Date.now();
     }
 
-    try {
-      // taskkill /T убивает и дочерние процессы сервера
-      spawn('taskkill', ['/pid', String(child.pid), '/t', '/f'], { windowsHide: true });
-    } catch {
-      child.kill('SIGTERM');
-    }
+    killProcessTree(child.pid);
     processes.delete(id);
     processMeta.delete(id);
     return { success: true, mode: 'real' };
@@ -453,11 +467,7 @@ export function stopServer(id: string): ServerStopResult {
   // Сервер мог быть запущен вне менеджера — останавливаем по PID из списка ОС
   const externalPid = externalPids.get(id);
   if (externalPid) {
-    try {
-      spawn('taskkill', ['/pid', String(externalPid), '/t', '/f'], { windowsHide: true });
-    } catch {
-      // taskkill недоступен
-    }
+    killProcessTree(externalPid);
     externalPids.delete(id);
     return { success: true, mode: 'real' };
   }
@@ -609,24 +619,40 @@ export async function detectExternalServers(servers: ServerPayload[]): Promise<R
 
   let running: Array<{ pid: number; exePath: string }> = [];
   try {
-    const psScript =
-      "$ErrorActionPreference='SilentlyContinue'; Get-CimInstance Win32_Process | " +
-      "Where-Object { $_.Name -in @('RustDedicatedServer.exe','RustDedicated.exe') } | " +
-      "ForEach-Object { Write-Output (\"$($_.ProcessId)|$($_.ExecutablePath)\") }";
-    const { stdout } = await execFileAsync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', psScript], {
-      timeout: 15_000,
-    });
-    for (const rawLine of stdout.split(/\r?\n/)) {
-      const line = rawLine.trim();
-      if (!line) continue;
-      const sep = line.indexOf('|');
-      if (sep < 0) continue;
-      const pid = Number(line.slice(0, sep));
-      const exePath = line.slice(sep + 1);
-      if (pid > 0 && exePath) running.push({ pid, exePath });
+    if (process.platform === 'win32') {
+      const psScript =
+        "$ErrorActionPreference='SilentlyContinue'; Get-CimInstance Win32_Process | " +
+        "Where-Object { $_.Name -in @('RustDedicatedServer.exe','RustDedicated.exe') } | " +
+        "ForEach-Object { Write-Output (\"$($_.ProcessId)|$($_.ExecutablePath)\") }";
+      const { stdout } = await execFileAsync(
+        'powershell.exe',
+        ['-NoProfile', '-NonInteractive', '-Command', psScript],
+        { timeout: 15_000 }
+      );
+      for (const rawLine of stdout.split(/\r?\n/)) {
+        const line = rawLine.trim();
+        if (!line) continue;
+        const sep = line.indexOf('|');
+        if (sep < 0) continue;
+        const pid = Number(line.slice(0, sep));
+        const exePath = line.slice(sep + 1);
+        if (pid > 0 && exePath) running.push({ pid, exePath });
+      }
+    } else {
+      // Linux: ps — PID + командная строка; находим RustDedicated по имени в аргументах.
+      const { stdout } = await execFileAsync('ps', ['-eo', 'pid=,args='], { timeout: 15_000 });
+      for (const rawLine of stdout.split(/\r?\n/)) {
+        const m = /^\s*(\d+)\s+(.+)$/.exec(rawLine);
+        if (!m) continue;
+        const pid = Number(m[1]);
+        const args = m[2].trim();
+        if (!/RustDedicated/.test(args)) continue;
+        const exePath = args.split(/\s+/)[0];
+        if (pid > 0 && exePath) running.push({ pid, exePath });
+      }
     }
   } catch {
-    // PowerShell недоступен — считаем, что внешних процессов нет
+    // нет доступа к процессам — считаем, что внешних серверов нет
   }
 
   for (const s of withPath) {
