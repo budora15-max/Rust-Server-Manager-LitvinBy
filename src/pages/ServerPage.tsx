@@ -38,6 +38,7 @@ import { GeneralTab } from '@/components/server/GeneralTab';
 import { ConsoleTab } from '@/components/server/ConsoleTab';
 import { MapTab } from '@/components/server/MapTab';
 import { SystemMemoryPanel } from '@/components/server/SystemMemoryPanel';
+import { UpdateProgressPanel, type UpdatePanelState } from '@/components/server/UpdateProgressPanel';
 import { PlayersTab } from '@/components/server/PlayersTab';
 import { PluginsTab } from '@/components/server/PluginsTab';
 import { WipesTab } from '@/components/server/WipesTab';
@@ -94,20 +95,25 @@ export default function ServerPage() {
   const [confirm, setConfirm] = useState<'start' | 'stop' | 'restart' | null>(null);
   const [confirmUpdate, setConfirmUpdate] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [updateState, setUpdateState] = useState<{
-    running: boolean;
-    pct?: number;
-    message?: string;
-    error?: string;
-  } | null>(null);
+  const [updateState, setUpdateState] = useState<UpdatePanelState | null>(null);
 
-  // Прогресс обновления сервера (SteamCMD)
+  // Прогресс обновления сервера (SteamCMD): этапы, скорость, лог.
   useEffect(() => {
     const bridge = window.rustManager;
     if (!bridge?.onServerUpdateProgress) return;
     const unsubscribe = bridge.onServerUpdateProgress((event: SteamUpdateProgress) => {
       if (event.serverId !== server?.id) return;
-      setUpdateState({ running: true, pct: event.pct, message: event.message });
+      setUpdateState({
+        running: true,
+        pct: event.pct,
+        stage: event.stage,
+        message: event.message,
+        downloadedMb: event.downloadedMb,
+        totalMb: event.totalMb,
+        speedMb: event.speedMb,
+        etaSeconds: event.etaSeconds,
+        log: event.log,
+      });
     });
     return unsubscribe;
   }, [server?.id]);
@@ -166,17 +172,40 @@ export default function ServerPage() {
 
   const handleUpdateServer = async () => {
     setConfirmUpdate(false);
-    setUpdateState({ running: true, message: t('serverPage.updateStarting') });
+    setUpdateState({ running: true, pct: 0, stage: 'checking', message: t('serverPage.updateStarting') });
     try {
       const result = await window.rustManager?.serverUpdate(server);
       if (result?.ok) {
-        setUpdateState({ running: false, message: t('serverPage.updateSuccess') });
+        setUpdateState((prev) => ({
+          ...(prev ?? {}),
+          running: false,
+          pct: 100,
+          stage: 'done',
+          message: t('serverPage.updateSuccess'),
+          error: undefined,
+        }));
       } else {
-        setUpdateState({ running: false, message: undefined, error: t('serverPage.updateError', { error: result?.error ?? t('serverPage.updateFailed') }) });
+        setUpdateState((prev) => ({
+          ...(prev ?? {}),
+          running: false,
+          stage: 'error',
+          message: undefined,
+          error: result?.error ?? t('serverPage.updateFailed'),
+        }));
       }
     } catch (e) {
-      setUpdateState({ running: false, message: undefined, error: String(e) });
+      setUpdateState((prev) => ({
+        ...(prev ?? {}),
+        running: false,
+        stage: 'error',
+        message: undefined,
+        error: String(e),
+      }));
     }
+  };
+
+  const handleCancelUpdate = () => {
+    void window.rustManager?.serverUpdateCancel();
   };
 
   const handleDeleteServer = () => {
@@ -293,29 +322,11 @@ export default function ServerPage() {
 
       {/* Прогресс обновления сервера */}
       {updateState && (
-        <div className="mb-6 rounded-xl border border-[#232833] bg-surface p-4">
-          <div className="flex items-center justify-between gap-3 text-sm">
-            <span className={cn('truncate', updateState.error ? 'text-red-400' : 'text-textMuted')}>
-              {updateState.error
-                ? t('serverPage.updateError', { error: updateState.error })
-                : updateState.message}
-            </span>
-            {typeof updateState.pct === 'number' && (
-              <span className="shrink-0 font-semibold text-textMain">
-                {Math.round(updateState.pct)}%
-              </span>
-            )}
-          </div>
-          <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#1a1e26]">
-            <div
-              className={cn(
-                'h-full rounded-full transition-all duration-300',
-                updateState.error ? 'bg-red-500' : 'bg-accent'
-              )}
-              style={{ width: `${updateState.pct ?? 0}%` }}
-            />
-          </div>
-        </div>
+        <UpdateProgressPanel
+          state={updateState}
+          onCancel={handleCancelUpdate}
+          onClose={() => setUpdateState(null)}
+        />
       )}
 
       {/* Живые метрики */}

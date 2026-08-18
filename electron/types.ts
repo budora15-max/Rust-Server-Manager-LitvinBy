@@ -153,6 +153,12 @@ export interface SteamUpdateProgress {
   serverId: string;
   message: string;
   pct?: number;
+  stage?: 'checking' | 'downloading' | 'validating' | 'done' | 'error';
+  downloadedMb?: number;
+  totalMb?: number;
+  speedMb?: number;
+  etaSeconds?: number;
+  log?: string[];
 }
 
 export interface MarketplacePlugin {

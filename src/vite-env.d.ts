@@ -142,6 +142,7 @@ declare global {
       ) => Promise<SaveConfigResult>;
 
       serverUpdate: (server: RustServer) => Promise<{ ok: boolean; error?: string }>;
+      serverUpdateCancel: () => Promise<{ ok: boolean }>;
       onServerUpdateProgress: (callback: (event: SteamUpdateProgress) => void) => () => void;
 
       wipeExecute: (server: RustServer, options: WipeOptions) => Promise<WipeResult>;

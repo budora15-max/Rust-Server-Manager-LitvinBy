@@ -111,6 +111,7 @@ const api = {
 
   // --- Обновление серверной части (SteamCMD) ---
   serverUpdate: (server: unknown) => ipcRenderer.invoke('server:update', server),
+  serverUpdateCancel: () => ipcRenderer.invoke('server:update-cancel'),
   onServerUpdateProgress: (callback: (event: unknown) => void) => {
     const listener = (_evt: unknown, data: unknown) => callback(data);
     ipcRenderer.on('server:update-progress', listener);

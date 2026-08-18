@@ -7,7 +7,7 @@ import { MetricsCollector } from './metrics';
 import { executeWipe } from './wipe';
 import { readServerConfig, saveServerConfig } from './config';
 import { checkPluginUpdates, deletePlugin, listPlugins, readPluginConfig, savePluginConfig, setPluginEnabled, updateAllPlugins, updatePlugin } from './plugins';
-import { updateRustServer } from './steamcmd';
+import { cancelUpdate, updateRustServer, type SteamProgressEvent } from './steamcmd';
 import { getMarketplaceList, installMarketplacePlugin, searchMarketplace } from './marketplace';
 import { sendWebhookEvent, sendWebhookTest, saveWebhookConfig, loadWebhookConfig, type WebhookConfig } from './discord';
 import { getLocale, initLocale, setLocale } from './locale';
@@ -664,8 +664,8 @@ async function maybeAutoUpdate(server: ServerPayload): Promise<{ ok: boolean; er
       message: ru ? 'Автообновление: обновление сервера…' : 'Auto-update: updating server…',
       pct: 0,
     });
-    const upd = await updateRustServer(server, (message, pct) =>
-      broadcast('server:update-progress', { serverId: server.id, message, pct })
+    const upd = await updateRustServer(server, (event) =>
+      broadcast('server:update-progress', { serverId: server.id, ...event })
     );
     if (!upd.ok) return { ok: false, error: `Auto-update failed: ${upd.error}` };
     const mods = await getModsStatus(server);
@@ -1102,10 +1102,16 @@ function registerIpc(): void {
 
   // --- Обновление серверной части Rust (SteamCMD) ---
   ipcMain.handle('server:update', (_event, server: ServerPayload) => {
-    const emit = (message: string, pct?: number) => {
-      broadcast('server:update-progress', { serverId: server.id, message, pct });
+    const emit = (event: SteamProgressEvent) => {
+      broadcast('server:update-progress', { serverId: server.id, ...event });
     };
     return updateRustServer(server, emit);
+  });
+
+  // Отмена текущего обновления (убивает процесс SteamCMD).
+  ipcMain.handle('server:update-cancel', () => {
+    cancelUpdate();
+    return { ok: true };
   });
 
   // --- Системные ---
