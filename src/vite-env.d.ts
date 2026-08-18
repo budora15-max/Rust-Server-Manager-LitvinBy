@@ -105,6 +105,20 @@ declare global {
       }>;
       mapCapture: (server: RustServer) => Promise<{ ok: boolean; error?: string }>;
 
+      mapRusteditInfo: (server: RustServer) => Promise<{
+        ok: boolean;
+        isCustom?: boolean;
+        fileName?: string;
+        size?: number;
+        seed?: number;
+        error?: string;
+      }>;
+      mapOpenInRustedit: (server: RustServer) => Promise<{
+        ok: boolean;
+        mode?: 'rustedit' | 'association';
+        error?: string;
+      }>;
+
       pluginsList: (server: RustServer) => Promise<PluginsListResult>;
       pluginsDelete: (filePath: string) => Promise<{ ok: boolean; error?: string }>;
       pluginsUpdate: (

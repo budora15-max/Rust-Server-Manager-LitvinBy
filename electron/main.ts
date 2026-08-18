@@ -2,6 +2,7 @@ import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, Notification, s
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { spawn } from 'child_process';
 import { RconManager } from './rcon';
 import { MetricsCollector } from './metrics';
 import { executeWipe } from './wipe';
@@ -242,6 +243,78 @@ async function ensureRconSend(server: ServerPayload, command: string): Promise<b
 function formatMb(bytes: number): string {
   if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+}
+
+// ---------------------------------------------------------------------------
+// RustEdit: определение и открытие кастомной карты (custommap.*.map).
+// ---------------------------------------------------------------------------
+
+interface RusteditMapInfo {
+  ok: boolean;
+  isCustom: boolean;
+  fileName?: string;
+  filePath?: string;
+  size?: number;
+  seed?: number;
+  error?: string;
+}
+
+/** Файл кастомной карты RustEdit (custommap.*.map) в identity-папке сервера. */
+function rusteditMapInfo(server: ServerPayload): RusteditMapInfo {
+  if (!server.installPath) return { ok: false, isCustom: false, error: 'no-install-path' };
+  const identityDir = path.join(server.installPath, 'server', server.identity);
+  try {
+    if (!fs.existsSync(identityDir)) return { ok: false, isCustom: false };
+    const maps = fs
+      .readdirSync(identityDir)
+      .filter((f) => /\.map$/i.test(f) && !/^proceduralmap/i.test(f))
+      .sort();
+    if (maps.length === 0) return { ok: false, isCustom: false };
+    const fileName = maps[0];
+    const m = /\.(\d+)\.(\d+)\.map$/i.exec(fileName);
+    return {
+      ok: true,
+      isCustom: true,
+      fileName,
+      filePath: path.join(identityDir, fileName),
+      size: m ? Number(m[1]) : undefined,
+      seed: m ? Number(m[2]) : undefined,
+    };
+  } catch (err) {
+    return { ok: false, isCustom: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+/** Поиск RustEdit.exe в типовых местах установки. */
+function findRustEditExe(): string | null {
+  const bases = [
+    process.env.PROGRAMFILES,
+    process.env['PROGRAMFILES(X86)'],
+    process.env.LOCALAPPDATA ? path.join(process.env.LOCALAPPDATA, 'Programs') : null,
+    os.homedir(),
+  ].filter((d): d is string => Boolean(d));
+  for (const base of bases) {
+    const exe = path.join(base, 'RustEdit', 'RustEdit.exe');
+    if (fs.existsSync(exe)) return exe;
+  }
+  // Ограниченный поиск по типовым папкам пользователя (Documents/Desktop/Downloads).
+  const scanDirs = [
+    path.join(os.homedir(), 'Documents'),
+    path.join(os.homedir(), 'Desktop'),
+    path.join(os.homedir(), 'Downloads'),
+  ];
+  for (const dir of scanDirs) {
+    try {
+      const hit = fs.readdirSync(dir).find((e) => /RustEdit/i.test(e));
+      if (hit) {
+        const exe = path.join(dir, hit, 'RustEdit.exe');
+        if (fs.existsSync(exe)) return exe;
+      }
+    } catch {
+      /* нет доступа — пропускаем */
+    }
+  }
+  return null;
 }
 
 /** Иконка в трее + быстрые действия. Файл build/tray.png генерируется скриптом gen-icons. */
@@ -862,6 +935,32 @@ function registerIpc(): void {
       ensureRconSend(server, 'write.png'),
     ]);
     return ore || write ? { ok: true } : { ok: false, error: 'rcon-failed' };
+  });
+
+  // --- RustEdit: кастомная карта (custommap.*.map) ---
+  ipcMain.handle('map:rustedit-info', (_event, server: ServerPayload) => rusteditMapInfo(server));
+
+  // Открыть кастомную карту в RustEdit (найденный exe или ассоциация .map в системе).
+  ipcMain.handle('map:open-in-rustedit', async (_event, server: ServerPayload) => {
+    const info = rusteditMapInfo(server);
+    if (!info.ok || !info.filePath) {
+      return { ok: false, error: info.error ?? 'no-custom-map' };
+    }
+    const exe = findRustEditExe();
+    if (exe) {
+      try {
+        spawn(exe, [info.filePath], { windowsHide: false, detached: true }).unref();
+        return { ok: true, mode: 'rustedit' };
+      } catch (err) {
+        return { ok: false, error: err instanceof Error ? err.message : String(err) };
+      }
+    }
+    try {
+      const err = await shell.openPath(info.filePath);
+      return err ? { ok: false, error: err } : { ok: true, mode: 'association' };
+    } catch (e) {
+      return { ok: false, error: e instanceof Error ? e.message : String(e) };
+    }
   });
 
   // Список игроков (JSON из команды playerlist)

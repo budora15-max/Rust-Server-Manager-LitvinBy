@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Camera, ExternalLink, ImageOff, Map as MapIcon, RefreshCw } from 'lucide-react';
+import { Camera, ExternalLink, ImageOff, Map as MapIcon, MapPinned, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/Button';
 import type { RustServer } from '@/types';
 
@@ -21,6 +21,47 @@ export function MapTab({ server }: { server: RustServer }) {
   const [loading, setLoading] = useState(false);
   const [capturing, setCapturing] = useState(false);
   const [captured, setCaptured] = useState(false);
+
+  const [rustedit, setRustedit] = useState<{
+    fileName: string;
+    size?: number;
+    seed?: number;
+  } | null>(null);
+  const [rusteditOpening, setRusteditOpening] = useState(false);
+  const [rusteditOpenError, setRusteditOpenError] = useState<string | null>(null);
+
+  // Кастомная карта RustEdit (custommap.*.map) в identity-папке сервера.
+  useEffect(() => {
+    const bridge = window.rustManager;
+    if (!bridge?.mapRusteditInfo) return;
+    let cancelled = false;
+    bridge
+      .mapRusteditInfo(server)
+      .then((res) => {
+        if (!cancelled && res.ok && res.isCustom) {
+          setRustedit({ fileName: res.fileName ?? '', size: res.size, seed: res.seed });
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [server]);
+
+  const openInRustedit = async () => {
+    const bridge = window.rustManager;
+    if (!bridge?.mapOpenInRustedit) return;
+    setRusteditOpening(true);
+    setRusteditOpenError(null);
+    try {
+      const res = await bridge.mapOpenInRustedit(server);
+      if (!res.ok) setRusteditOpenError(t('serverPage.map.rusteditNotFound'));
+    } catch {
+      setRusteditOpenError(t('serverPage.map.rusteditNotFound'));
+    } finally {
+      setRusteditOpening(false);
+    }
+  };
 
   const load = useCallback(async () => {
     const bridge = window.rustManager;
@@ -151,6 +192,36 @@ export function MapTab({ server }: { server: RustServer }) {
             </p>
           </div>
           {errorText() && <p className="text-xs text-amber-400">{errorText()}</p>}
+        </div>
+      )}
+
+      {rustedit && (
+        <div className="mt-4 rounded-xl border border-[#232833] bg-surface p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h3 className="flex items-center gap-1.5 text-sm font-semibold text-textMain">
+                <MapPinned className="h-4 w-4 text-accent" />
+                {t('serverPage.map.rusteditTitle')}
+              </h3>
+              <p className="mt-0.5 truncate text-xs text-textMuted">
+                {rustedit.fileName}
+                {rustedit.size ? ` · ${rustedit.size}` : ''}
+                {rustedit.seed ? ` · seed ${rustedit.seed}` : ''}
+              </p>
+            </div>
+            <Button
+              size="sm"
+              variant="secondary"
+              loading={rusteditOpening}
+              onClick={() => void openInRustedit()}
+            >
+              <MapPinned className="h-3.5 w-3.5" />
+              {t('serverPage.map.rusteditOpen')}
+            </Button>
+          </div>
+          {rusteditOpenError && (
+            <p className="mt-2 text-xs text-amber-400">{rusteditOpenError}</p>
+          )}
         </div>
       )}
 

@@ -85,6 +85,8 @@ const api = {
   // --- Карта мира ---
   mapGetPreview: (server: unknown) => ipcRenderer.invoke('map:get-preview', server),
   mapCapture: (server: unknown) => ipcRenderer.invoke('map:capture', server),
+  mapRusteditInfo: (server: unknown) => ipcRenderer.invoke('map:rustedit-info', server),
+  mapOpenInRustedit: (server: unknown) => ipcRenderer.invoke('map:open-in-rustedit', server),
 
   // --- Плагины Oxide ---
   pluginsList: (server: unknown) => ipcRenderer.invoke('plugins:list', server),
