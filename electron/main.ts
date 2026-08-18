@@ -5,6 +5,7 @@ import * as path from 'path';
 import { spawn } from 'child_process';
 import { RconManager } from './rcon';
 import { MetricsCollector } from './metrics';
+import { httpGet } from './http';
 import { executeWipe } from './wipe';
 import { readServerConfig, saveServerConfig } from './config';
 import { checkPluginUpdates, deletePlugin, listPlugins, readPluginConfig, savePluginConfig, setPluginEnabled, updateAllPlugins, updatePlugin } from './plugins';
@@ -319,8 +320,13 @@ function findRustEditExe(): string | null {
 
 // ---------------------------------------------------------------------------
 // RustEdit: расширение Oxide.Ext.RustEdit.dll (нужно для запуска кастомных карт).
-// Файл поставляется вместе с RustEdit (в папке установки редактора).
+// Файл поставляется вместе с RustEdit; собранный dll также лежит в репозитории
+// автора (k1lly0u/Oxide.Ext.RustEdit) — оттуда его можно скачать.
 // ---------------------------------------------------------------------------
+
+/** Официальный источник собранного Oxide.Ext.RustEdit.dll. */
+const RUSTEDIT_DLL_URL =
+  'https://raw.githubusercontent.com/k1lly0u/Oxide.Ext.RustEdit/master/Oxide.Ext.RustEdit.dll';
 
 /** Путь к папке Oxide сервера (там лежат расширения Oxide). */
 function oxideDir(server: ServerPayload): string {
@@ -1001,16 +1007,25 @@ function registerIpc(): void {
     rusteditExtensionStatus(server)
   );
 
-  // Копирует Oxide.Ext.RustEdit.dll из установки RustEdit в папку oxide сервера.
-  ipcMain.handle('rustedit:extension-install', (_event, server: ServerPayload) => {
+  // Устанавливает Oxide.Ext.RustEdit.dll в папку oxide сервера: сначала копирует
+  // из установки RustEdit (файл идёт вместе с редактором), иначе скачивает
+  // собранный dll с GitHub (k1lly0u/Oxide.Ext.RustEdit).
+  ipcMain.handle('rustedit:extension-install', async (_event, server: ServerPayload) => {
     if (!server.installPath) return { ok: false, error: 'no-install-path' };
-    const src = findRustEditDll();
-    if (!src) return { ok: false, error: 'rustedit-dll-not-found' };
     const target = path.join(oxideDir(server), 'Oxide.Ext.RustEdit.dll');
     try {
       fs.mkdirSync(path.dirname(target), { recursive: true });
-      fs.copyFileSync(src, target);
-      return { ok: true };
+      const src = findRustEditDll();
+      if (src) {
+        fs.copyFileSync(src, target);
+        return { ok: true, source: 'rustedit' };
+      }
+      const res = await httpGet(RUSTEDIT_DLL_URL);
+      if (res.status !== 200) {
+        return { ok: false, error: `Download failed (HTTP ${res.status})` };
+      }
+      fs.writeFileSync(target, res.body);
+      return { ok: true, source: 'github' };
     } catch (err) {
       return { ok: false, error: err instanceof Error ? err.message : String(err) };
     }

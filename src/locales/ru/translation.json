@@ -207,7 +207,6 @@
       "rusteditExtRemove": "Удалить расширение",
       "rusteditExtInstallOk": "Расширение установлено. Перезапустите сервер, чтобы оно применилось.",
       "rusteditExtInstallErr": "Не удалось установить расширение: {{error}}",
-      "rusteditExtRustEditMissing": "Файл Oxide.Ext.RustEdit.dll не найден — он поставляется вместе с RustEdit. Установите RustEdit или скопируйте dll вручную в папку oxide сервера.",
       "openExternal": "Открыть на rustmaps.com",
       "offline": "Сервер не запущен — сначала запустите его.",
       "noInstall": "У сервера не указана папка установки — превью карты недоступно.",

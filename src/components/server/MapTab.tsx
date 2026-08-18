@@ -92,8 +92,6 @@ export function MapTab({ server }: { server: RustServer }) {
       if (res.ok) {
         setExtInstalled(true);
         setExtMsg(t('serverPage.map.rusteditExtInstallOk'));
-      } else if (res.error === 'rustedit-dll-not-found') {
-        setExtMsg(t('serverPage.map.rusteditExtRustEditMissing'));
       } else {
         setExtMsg(t('serverPage.map.rusteditExtInstallErr', { error: res.error }));
       }

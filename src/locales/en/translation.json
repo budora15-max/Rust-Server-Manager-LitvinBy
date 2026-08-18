@@ -207,7 +207,6 @@
       "rusteditExtRemove": "Remove extension",
       "rusteditExtInstallOk": "Extension installed. Restart the server to apply it.",
       "rusteditExtInstallErr": "Failed to install extension: {{error}}",
-      "rusteditExtRustEditMissing": "Oxide.Ext.RustEdit.dll was not found — it ships with RustEdit. Install RustEdit or copy the dll manually into the server oxide folder.",
       "openExternal": "Open on rustmaps.com",
       "offline": "Server is not running — start it first.",
       "noInstall": "Server install folder is not set — map preview is unavailable.",
