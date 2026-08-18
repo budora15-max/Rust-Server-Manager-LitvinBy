@@ -317,6 +317,39 @@ function findRustEditExe(): string | null {
   return null;
 }
 
+// ---------------------------------------------------------------------------
+// RustEdit: расширение Oxide.Ext.RustEdit.dll (нужно для запуска кастомных карт).
+// Файл поставляется вместе с RustEdit (в папке установки редактора).
+// ---------------------------------------------------------------------------
+
+/** Путь к папке Oxide сервера (там лежат расширения Oxide). */
+function oxideDir(server: ServerPayload): string {
+  return path.join(server.installPath ?? '', 'oxide');
+}
+
+/** Статус расширения RustEdit на сервере (Oxide.Ext.RustEdit.dll в папке oxide). */
+function rusteditExtensionStatus(server: ServerPayload): { ok: boolean; installed: boolean; path?: string } {
+  if (!server.installPath) return { ok: false, installed: false };
+  const p = path.join(oxideDir(server), 'Oxide.Ext.RustEdit.dll');
+  return { ok: true, installed: fs.existsSync(p), path: p };
+}
+
+/** Поиск Oxide.Ext.RustEdit.dll в установке RustEdit (рядом с exe / Documents\RustEdit). */
+function findRustEditDll(): string | null {
+  const exe = findRustEditExe();
+  if (exe) {
+    const p = path.join(path.dirname(exe), 'Oxide.Ext.RustEdit.dll');
+    if (fs.existsSync(p)) return p;
+  }
+  const candidates = [
+    path.join(os.homedir(), 'Documents', 'RustEdit', 'Oxide.Ext.RustEdit.dll'),
+    path.join(os.homedir(), 'Downloads', 'Oxide.Ext.RustEdit.dll'),
+    path.join(os.homedir(), 'Desktop', 'Oxide.Ext.RustEdit.dll'),
+  ];
+  for (const c of candidates) if (fs.existsSync(c)) return c;
+  return null;
+}
+
 /** Иконка в трее + быстрые действия. Файл build/tray.png генерируется скриптом gen-icons. */
 function createTray(): void {
   if (tray) return;
@@ -960,6 +993,37 @@ function registerIpc(): void {
       return err ? { ok: false, error: err } : { ok: true, mode: 'association' };
     } catch (e) {
       return { ok: false, error: e instanceof Error ? e.message : String(e) };
+    }
+  });
+
+  // --- RustEdit: расширение Oxide.Ext.RustEdit.dll (для кастомных карт) ---
+  ipcMain.handle('rustedit:extension-status', (_event, server: ServerPayload) =>
+    rusteditExtensionStatus(server)
+  );
+
+  // Копирует Oxide.Ext.RustEdit.dll из установки RustEdit в папку oxide сервера.
+  ipcMain.handle('rustedit:extension-install', (_event, server: ServerPayload) => {
+    if (!server.installPath) return { ok: false, error: 'no-install-path' };
+    const src = findRustEditDll();
+    if (!src) return { ok: false, error: 'rustedit-dll-not-found' };
+    const target = path.join(oxideDir(server), 'Oxide.Ext.RustEdit.dll');
+    try {
+      fs.mkdirSync(path.dirname(target), { recursive: true });
+      fs.copyFileSync(src, target);
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
+
+  // Удаляет расширение из папки oxide сервера.
+  ipcMain.handle('rustedit:extension-remove', (_event, server: ServerPayload) => {
+    const p = path.join(oxideDir(server), 'Oxide.Ext.RustEdit.dll');
+    try {
+      if (fs.existsSync(p)) fs.unlinkSync(p);
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
     }
   });
 

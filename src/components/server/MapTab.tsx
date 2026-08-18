@@ -29,6 +29,9 @@ export function MapTab({ server }: { server: RustServer }) {
   } | null>(null);
   const [rusteditOpening, setRusteditOpening] = useState(false);
   const [rusteditOpenError, setRusteditOpenError] = useState<string | null>(null);
+  const [extInstalled, setExtInstalled] = useState<boolean | null>(null);
+  const [extBusy, setExtBusy] = useState<'install' | 'remove' | null>(null);
+  const [extMsg, setExtMsg] = useState<string | null>(null);
 
   // Кастомная карта RustEdit (custommap.*.map) в identity-папке сервера.
   useEffect(() => {
@@ -60,6 +63,60 @@ export function MapTab({ server }: { server: RustServer }) {
       setRusteditOpenError(t('serverPage.map.rusteditNotFound'));
     } finally {
       setRusteditOpening(false);
+    }
+  };
+
+  // Статус расширения Oxide.Ext.RustEdit.dll на сервере (нужно для кастомных карт).
+  useEffect(() => {
+    const bridge = window.rustManager;
+    if (!bridge?.rusteditExtensionStatus || !rustedit) return;
+    let cancelled = false;
+    bridge
+      .rusteditExtensionStatus(server)
+      .then((res) => {
+        if (!cancelled) setExtInstalled(res.installed);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [server, rustedit]);
+
+  const installExtension = async () => {
+    const bridge = window.rustManager;
+    if (!bridge?.rusteditExtensionInstall) return;
+    setExtBusy('install');
+    setExtMsg(null);
+    try {
+      const res = await bridge.rusteditExtensionInstall(server);
+      if (res.ok) {
+        setExtInstalled(true);
+        setExtMsg(t('serverPage.map.rusteditExtInstallOk'));
+      } else if (res.error === 'rustedit-dll-not-found') {
+        setExtMsg(t('serverPage.map.rusteditExtRustEditMissing'));
+      } else {
+        setExtMsg(t('serverPage.map.rusteditExtInstallErr', { error: res.error }));
+      }
+    } catch {
+      setExtMsg(t('serverPage.map.rusteditExtInstallErr', { error: '?' }));
+    } finally {
+      setExtBusy(null);
+    }
+  };
+
+  const removeExtension = async () => {
+    const bridge = window.rustManager;
+    if (!bridge?.rusteditExtensionRemove) return;
+    setExtBusy('remove');
+    setExtMsg(null);
+    try {
+      const res = await bridge.rusteditExtensionRemove(server);
+      if (res.ok) setExtInstalled(false);
+      else setExtMsg(t('serverPage.map.rusteditExtInstallErr', { error: res.error }));
+    } catch {
+      setExtMsg(t('serverPage.map.rusteditExtInstallErr', { error: '?' }));
+    } finally {
+      setExtBusy(null);
     }
   };
 
@@ -221,6 +278,37 @@ export function MapTab({ server }: { server: RustServer }) {
           </div>
           {rusteditOpenError && (
             <p className="mt-2 text-xs text-amber-400">{rusteditOpenError}</p>
+          )}
+          {extInstalled !== null && (
+            <div className="mt-3 border-t border-[#232833] pt-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className={extInstalled ? 'text-xs text-emerald-400' : 'text-xs text-amber-400'}>
+                  {extInstalled
+                    ? t('serverPage.map.rusteditExtInstalled')
+                    : t('serverPage.map.rusteditExtMissing')}
+                </p>
+                {extInstalled ? (
+                  <Button
+                    size="sm"
+                    variant="danger"
+                    loading={extBusy === 'remove'}
+                    onClick={() => void removeExtension()}
+                  >
+                    {t('serverPage.map.rusteditExtRemove')}
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    loading={extBusy === 'install'}
+                    onClick={() => void installExtension()}
+                  >
+                    {t('serverPage.map.rusteditExtInstall')}
+                  </Button>
+                )}
+              </div>
+              {extMsg && <p className="mt-2 text-xs text-textMuted">{extMsg}</p>}
+            </div>
           )}
         </div>
       )}

@@ -119,6 +119,14 @@ declare global {
         error?: string;
       }>;
 
+      rusteditExtensionStatus: (server: RustServer) => Promise<{
+        ok: boolean;
+        installed: boolean;
+        path?: string;
+      }>;
+      rusteditExtensionInstall: (server: RustServer) => Promise<{ ok: boolean; error?: string }>;
+      rusteditExtensionRemove: (server: RustServer) => Promise<{ ok: boolean; error?: string }>;
+
       pluginsList: (server: RustServer) => Promise<PluginsListResult>;
       pluginsDelete: (filePath: string) => Promise<{ ok: boolean; error?: string }>;
       pluginsUpdate: (
