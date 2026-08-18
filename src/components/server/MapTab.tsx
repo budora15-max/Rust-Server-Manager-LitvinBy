@@ -88,10 +88,11 @@ export function MapTab({ server }: { server: RustServer }) {
 
   // Полноценная карта мира по сиду доступна на rustmaps.com (рендер ландшафта).
   // Работает для Procedural Map; локально Rust такой PNG не сохраняет.
+  // Формат URL rustmaps.com: /map/<worldsize>_<seed> (например /map/2600_456123).
   const isProcedural = !server.map || /procedural/i.test(server.map);
   const rustmapsUrl =
     isProcedural && server.seed > 0
-      ? `https://rustmaps.com/map/${server.seed}_${server.worldSize > 0 ? server.worldSize : 4000}`
+      ? `https://rustmaps.com/map/${server.worldSize > 0 ? server.worldSize : 4000}_${server.seed}`
       : null;
 
   const openExternal = (url: string) => {
