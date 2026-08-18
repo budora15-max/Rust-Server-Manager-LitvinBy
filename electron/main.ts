@@ -793,42 +793,64 @@ function registerIpc(): void {
   );
   ipcMain.handle('rcon:status', () => rconManager.status());
 
-  // --- Карта мира: превью (PNG, создаваемая игрой или командой write.png) ---
+  // --- Карта мира: превью (PNG, создаваемая сервером) ---
   ipcMain.handle('map:get-preview', (_event, server: ServerPayload) => {
     if (!server.installPath) return { ok: false, error: 'no-install-path' };
-    // Ищем самый свежий PNG/JPG в server/<identity>/map и server/<identity>.
-    const candidates = [
-      path.join(server.installPath, 'server', server.identity, 'map'),
-      path.join(server.installPath, 'server', server.identity),
-    ];
+    // Ищем самый свежий PNG/JPG в server/<identity>/ и подпапках (map/, debug/):
+    // сюда Rust кладёт и превью write.png (старые версии), и debug/ore-nodes.png
+    // (spawn.ore_map — современные версии, где write.png удалён).
+    const identityDir = path.join(server.installPath, 'server', server.identity);
     try {
-      for (const dir of candidates) {
-        if (!fs.existsSync(dir)) continue;
-        const files = fs
-          .readdirSync(dir)
-          .filter((f) => /\.(png|jpe?g)$/i.test(f))
-          .map((name) => ({ name, file: path.join(dir, name) }))
-          .sort((a, b) => fs.statSync(b.file).mtimeMs - fs.statSync(a.file).mtimeMs);
-        if (files.length === 0) continue;
-        const buf = fs.readFileSync(files[0].file);
-        const isJpg = /\.jpe?g$/i.test(files[0].name);
-        return {
-          ok: true,
-          dataUrl: `data:image/${isJpg ? 'jpeg' : 'png'};base64,${buf.toString('base64')}`,
-          fileName: files[0].name,
-        };
-      }
-      return { ok: false, error: 'not-found' };
+      if (!fs.existsSync(identityDir)) return { ok: false, error: 'not-found' };
+      const files: Array<{ name: string; file: string; mtime: number }> = [];
+      const walk = (dir: string, depth: number): void => {
+        if (depth > 3) return;
+        let entries: fs.Dirent[] = [];
+        try {
+          entries = fs.readdirSync(dir, { withFileTypes: true });
+        } catch {
+          return;
+        }
+        for (const e of entries) {
+          const full = path.join(dir, e.name);
+          if (e.isDirectory()) {
+            if (e.name === 'cfg' || e.name === 'command_history' || e.name === 'oxide') continue;
+            walk(full, depth + 1);
+          } else if (/\.(png|jpe?g)$/i.test(e.name)) {
+            try {
+              files.push({ name: e.name, file: full, mtime: fs.statSync(full).mtimeMs });
+            } catch {
+              /* файл мог исчезнуть между чтением и stat */
+            }
+          }
+        }
+      };
+      walk(identityDir, 0);
+      if (files.length === 0) return { ok: false, error: 'not-found' };
+      files.sort((a, b) => b.mtime - a.mtime);
+      const buf = fs.readFileSync(files[0].file);
+      const isJpg = /\.jpe?g$/i.test(files[0].name);
+      return {
+        ok: true,
+        dataUrl: `data:image/${isJpg ? 'jpeg' : 'png'};base64,${buf.toString('base64')}`,
+        fileName: files[0].name,
+      };
     } catch (err) {
       return { ok: false, error: err instanceof Error ? err.message : String(err) };
     }
   });
 
-  // Карта мира: запросить актуальный скриншот у работающего сервера (write.png).
+  // Карта мира: запросить актуальное изображение у работающего сервера.
+  // В современных версиях Rust команда write.png удалена — используем spawn.ore_map
+  // (создаёт server/<identity>/debug/ore-nodes.png — карта руды). write.png
+  // дополнительно отправляем для старых версий, где он создаёт полноценное превью.
   ipcMain.handle('map:capture', async (_event, server: ServerPayload) => {
     if (!isProcessRunning(server.id)) return { ok: false, error: 'server-offline' };
-    const ok = await ensureRconSend(server, 'write.png');
-    return ok ? { ok: true } : { ok: false, error: 'rcon-failed' };
+    const [ore, write] = await Promise.all([
+      ensureRconSend(server, 'spawn.ore_map'),
+      ensureRconSend(server, 'write.png'),
+    ]);
+    return ore || write ? { ok: true } : { ok: false, error: 'rcon-failed' };
   });
 
   // Список игроков (JSON из команды playerlist)
