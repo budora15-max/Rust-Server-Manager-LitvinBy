@@ -1,3 +1,4 @@
+<img width="1872" height="1017" alt="rsm" src="https://github.com/user-attachments/assets/18b3b41d-b117-4e18-8e1a-978f28f6dd5a" />
 # Rust Server Manager
 
 Десktop-приложение для управления выделенными серверами **Rust** (Windows): запуск/остановка, RCON-консоль, игроки, плагины, вайпы, бэкапы, расписания, мониторинг и уведомления — всё в одном окне.
