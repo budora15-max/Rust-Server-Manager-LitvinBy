@@ -2,7 +2,7 @@
 
 Все значимые изменения проекта. Формат основан на [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/).
 
-## [Unreleased]
+## [1.0.2] — 2026-08-18
 
 ### Добавлено
 - Поддержка Linux: запуск нативного бинарника `RustDedicated`, SteamCMD для Linux (tar.gz), детект внешних процессов через `ps`, порты через `netstat -tunlp`/`ss`, автозапуск через XDG `.desktop`. Управление Windows Firewall — только на Windows.
