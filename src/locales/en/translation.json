@@ -199,6 +199,7 @@
       "worldMap": "World map by seed (rustmaps.com)",
       "worldMapHint": "In modern Rust versions the full world map is not saved locally — open it by seed on rustmaps.com.",
       "rusteditTitle": "Custom map (RustEdit)",
+      "rusteditExtTitle": "RustEdit extension (custom maps)",
       "rusteditOpen": "Open in RustEdit",
       "rusteditNotFound": "RustEdit was not found. Install RustEdit or open the map file manually.",
       "rusteditExtInstalled": "Oxide.Ext.RustEdit.dll extension is installed",

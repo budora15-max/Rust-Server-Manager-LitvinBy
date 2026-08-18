@@ -69,7 +69,7 @@ export function MapTab({ server }: { server: RustServer }) {
   // Статус расширения Oxide.Ext.RustEdit.dll на сервере (нужно для кастомных карт).
   useEffect(() => {
     const bridge = window.rustManager;
-    if (!bridge?.rusteditExtensionStatus || !rustedit) return;
+    if (!bridge?.rusteditExtensionStatus || !server.installPath) return;
     let cancelled = false;
     bridge
       .rusteditExtensionStatus(server)
@@ -80,7 +80,7 @@ export function MapTab({ server }: { server: RustServer }) {
     return () => {
       cancelled = true;
     };
-  }, [server, rustedit]);
+  }, [server]);
 
   const installExtension = async () => {
     const bridge = window.rustManager;
@@ -277,37 +277,52 @@ export function MapTab({ server }: { server: RustServer }) {
           {rusteditOpenError && (
             <p className="mt-2 text-xs text-amber-400">{rusteditOpenError}</p>
           )}
-          {extInstalled !== null && (
-            <div className="mt-3 border-t border-[#232833] pt-3">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className={extInstalled ? 'text-xs text-emerald-400' : 'text-xs text-amber-400'}>
-                  {extInstalled
-                    ? t('serverPage.map.rusteditExtInstalled')
-                    : t('serverPage.map.rusteditExtMissing')}
-                </p>
-                {extInstalled ? (
-                  <Button
-                    size="sm"
-                    variant="danger"
-                    loading={extBusy === 'remove'}
-                    onClick={() => void removeExtension()}
-                  >
-                    {t('serverPage.map.rusteditExtRemove')}
-                  </Button>
-                ) : (
-                  <Button
-                    size="sm"
-                    variant="primary"
-                    loading={extBusy === 'install'}
-                    onClick={() => void installExtension()}
-                  >
-                    {t('serverPage.map.rusteditExtInstall')}
-                  </Button>
-                )}
-              </div>
-              {extMsg && <p className="mt-2 text-xs text-textMuted">{extMsg}</p>}
+        </div>
+      )}
+
+      {/* Расширение Oxide.Ext.RustEdit.dll — нужно для запуска кастомных карт.
+          Показывается всегда (независимо от наличия кастомной карты). */}
+      {server.installPath && extInstalled !== null && (
+        <div className="mt-4 rounded-xl border border-[#232833] bg-surface p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h3 className="flex items-center gap-1.5 text-sm font-semibold text-textMain">
+                <MapPinned className="h-4 w-4 text-accent" />
+                {t('serverPage.map.rusteditExtTitle')}
+              </h3>
+              <p
+                className={
+                  extInstalled
+                    ? 'mt-0.5 text-xs text-emerald-400'
+                    : 'mt-0.5 text-xs text-amber-400'
+                }
+              >
+                {extInstalled
+                  ? t('serverPage.map.rusteditExtInstalled')
+                  : t('serverPage.map.rusteditExtMissing')}
+              </p>
             </div>
-          )}
+            {extInstalled ? (
+              <Button
+                size="sm"
+                variant="danger"
+                loading={extBusy === 'remove'}
+                onClick={() => void removeExtension()}
+              >
+                {t('serverPage.map.rusteditExtRemove')}
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                variant="primary"
+                loading={extBusy === 'install'}
+                onClick={() => void installExtension()}
+              >
+                {t('serverPage.map.rusteditExtInstall')}
+              </Button>
+            )}
+          </div>
+          {extMsg && <p className="mt-2 text-xs text-textMuted">{extMsg}</p>}
         </div>
       )}
 

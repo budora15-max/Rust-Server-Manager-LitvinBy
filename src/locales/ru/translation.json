@@ -199,6 +199,7 @@
       "worldMap": "Карта мира по сиду (rustmaps.com)",
       "worldMapHint": "Полноценная карта мира в современных версиях Rust не сохраняется на диск — откройте её по сиду на rustmaps.com.",
       "rusteditTitle": "Кастомная карта (RustEdit)",
+      "rusteditExtTitle": "Расширение RustEdit (кастомные карты)",
       "rusteditOpen": "Открыть в RustEdit",
       "rusteditNotFound": "RustEdit не найден. Установите RustEdit или откройте файл карты вручную.",
       "rusteditExtInstalled": "Расширение Oxide.Ext.RustEdit.dll установлено",
