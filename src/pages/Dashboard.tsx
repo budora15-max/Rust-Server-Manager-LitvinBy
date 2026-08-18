@@ -3,6 +3,7 @@ import { Activity, Cpu, Plus, Server, Users } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { AppShell } from '@/components/AppShell';
 import { ServerCard } from '@/components/ServerCard';
+import { SystemMemoryPanel } from '@/components/server/SystemMemoryPanel';
 import { Button } from '@/components/Button';
 import { NewServerModal } from '@/components/NewServerModal';
 import { useServer } from '@/context/ServerContext';
@@ -32,6 +33,9 @@ export default function Dashboard() {
           }, 0) / total
         )
       : 0;
+
+  // Суммарная RAM всех работающих серверов (из живых метрик).
+  const serversRamMb = servers.reduce((acc, s) => acc + (metrics[s.id]?.memoryMb ?? 0), 0);
 
   const stats = [
     { label: t('dashboard.totalServers'), value: String(total), Icon: Server, tint: 'text-accent bg-accent/10' },
@@ -70,6 +74,15 @@ export default function Dashboard() {
             </div>
           </div>
         ))}
+      </div>
+
+      {/* Память: все серверы + система */}
+      <div className="mt-6">
+        <SystemMemoryPanel
+          serverMb={serversRamMb}
+          title={t('dashboard.memory.title')}
+          serverLabel={t('dashboard.memory.servers')}
+        />
       </div>
 
       {/* Серверы */}

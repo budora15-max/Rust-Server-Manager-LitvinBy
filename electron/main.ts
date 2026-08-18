@@ -977,6 +977,45 @@ function registerIpc(): void {
     installMarketplacePlugin(payload.server, payload.slug)
   );
 
+  // --- Установка плагина с диска: выбор папки с .cs файлами ---
+  ipcMain.handle('plugins:pick-dir', async () => {
+    const win = BrowserWindow.getFocusedWindow() ?? mainWindow ?? undefined;
+    if (!win) return { ok: false, error: 'no-window' };
+    const res = await dialog.showOpenDialog(win, {
+      title: 'Select plugin folder',
+      properties: ['openDirectory'],
+    });
+    if (res.canceled || res.filePaths.length === 0) return { ok: false, canceled: true };
+    const dir = res.filePaths[0];
+    let files: string[] = [];
+    try {
+      files = fs
+        .readdirSync(dir)
+        .filter((f) => f.toLowerCase().endsWith('.cs'))
+        .sort();
+    } catch {
+      files = [];
+    }
+    return { ok: true, dir, files };
+  });
+
+  // Копирование выбранного .cs файла в oxide/plugins сервера
+  ipcMain.handle(
+    'plugins:install-from-disk',
+    (_event, payload: { server: ServerPayload; dir: string; fileName: string }) => {
+      const { server, dir, fileName } = payload;
+      if (!server.installPath) return { ok: false, error: 'no-install-path' };
+      const target = path.join(server.installPath, 'oxide', 'plugins', path.basename(fileName));
+      try {
+        fs.mkdirSync(path.dirname(target), { recursive: true });
+        fs.copyFileSync(path.join(dir, fileName), target);
+        return { ok: true, fileName: path.basename(fileName) };
+      } catch (err) {
+        return { ok: false, error: err instanceof Error ? err.message : String(err) };
+      }
+    }
+  );
+
   // --- Конфигурация server.cfg ---
   ipcMain.handle('config:read', (_event, server: ServerPayload) => readServerConfig(server));
   ipcMain.handle('config:save', (_event, payload: { server: ServerPayload; config: Record<string, string> }) =>

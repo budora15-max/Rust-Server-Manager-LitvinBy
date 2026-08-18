@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Check, Download, ExternalLink, Loader2, Package, Search } from 'lucide-react';
+import { Check, Download, ExternalLink, FolderOpen, Loader2, Package, Search } from 'lucide-react';
 import type { MarketplacePlugin, RustServer } from '@/types';
 import { Button } from '@/components/Button';
 import { cn } from '@/lib/utils';
@@ -28,6 +28,8 @@ export function MarketplaceTab({ server }: { server: RustServer }) {
   const [installedIds, setInstalledIds] = useState<Set<string>>(new Set());
   const [installingSlug, setInstallingSlug] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
+  const [disk, setDisk] = useState<{ dir: string; files: string[] } | null>(null);
+  const [installingDisk, setInstallingDisk] = useState<string | null>(null);
 
   const searchTimer = useRef<number | undefined>(undefined);
 
@@ -106,6 +108,36 @@ export function MarketplaceTab({ server }: { server: RustServer }) {
     }
   };
 
+  // Установка с диска: выбрать папку с .cs файлами плагинов.
+  const handlePickDir = async () => {
+    if (!bridge) return;
+    try {
+      const res = await bridge.pluginsPickDir();
+      if (!res.ok) return; // отмена или ошибка
+      setDisk({ dir: res.dir ?? '', files: res.files ?? [] });
+    } catch {
+      pushNotice('err', t('marketplace.installError'));
+    }
+  };
+
+  // Установить выбранный файл плагина в oxide/plugins сервера.
+  const handleInstallFile = async (fileName: string) => {
+    if (!bridge || !disk) return;
+    setInstallingDisk(fileName);
+    try {
+      const res = await bridge.pluginsInstallFromDisk(server, disk.dir, fileName);
+      if (res.ok) {
+        pushNotice('ok', t('marketplace.installedFromDisk', { name: res.fileName ?? fileName }));
+      } else {
+        pushNotice('err', `${t('marketplace.installError')}: ${res.error}`);
+      }
+    } catch (e) {
+      pushNotice('err', `${t('marketplace.installError')}: ${String(e)}`);
+    } finally {
+      setInstallingDisk(null);
+    }
+  };
+
   const displayed = results ?? top;
   const title = results !== null ? t('marketplace.results') : t('marketplace.popular');
   const noPath = !server.installPath;
@@ -130,6 +162,58 @@ export function MarketplaceTab({ server }: { server: RustServer }) {
           {t('marketplace.networkError')}
         </p>
       )}
+
+      {/* Установка плагина с диска */}
+      <div className="mb-4 rounded-xl border border-[#232833] bg-surface p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0">
+            <h3 className="flex items-center gap-1.5 text-sm font-semibold text-textMain">
+              <FolderOpen className="h-4 w-4 text-accent" />
+              {t('marketplace.installFromDisk')}
+            </h3>
+            <p className="mt-0.5 text-xs text-textMuted">{t('marketplace.pickFolderHint')}</p>
+          </div>
+          <Button
+            size="sm"
+            variant="secondary"
+            disabled={!bridge || !server.installPath}
+            onClick={() => void handlePickDir()}
+          >
+            <FolderOpen className="h-3.5 w-3.5" /> {t('marketplace.pickFolder')}
+          </Button>
+        </div>
+        {!server.installPath && (
+          <p className="mt-3 text-xs text-amber-400">{t('marketplace.installPathNeeded')}</p>
+        )}
+        {disk && (
+          <div className="mt-3 border-t border-[#232833] pt-3">
+            {disk.files.length === 0 ? (
+              <p className="text-xs text-textMuted">{t('marketplace.noCsFiles')}</p>
+            ) : (
+              <ul className="grid grid-cols-1 gap-1.5 md:grid-cols-2">
+                {disk.files.map((f) => (
+                  <li key={f}>
+                    <button
+                      type="button"
+                      disabled={installingDisk !== null}
+                      onClick={() => void handleInstallFile(f)}
+                      className="flex w-full items-center justify-between gap-2 rounded-lg border border-[#2a2f3a] bg-[#1a1e26] px-3 py-2 text-left text-xs text-textMain transition-colors hover:border-accent/50 hover:bg-accent/5 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <span className="truncate">{f}</span>
+                      {installingDisk === f ? (
+                        <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-accent" />
+                      ) : (
+                        <Download className="h-3.5 w-3.5 shrink-0 text-textMuted" />
+                      )}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="mt-2 truncate text-[10px] text-textMuted/70">{disk.dir}</p>
+          </div>
+        )}
+      </div>
 
       {/* Поиск */}
       <div className="mb-4 rounded-xl border border-[#232833] bg-surface p-4">

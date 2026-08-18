@@ -122,6 +122,19 @@ declare global {
         slug: string
       ) => Promise<{ ok: boolean; message?: string; error?: string }>;
 
+      pluginsPickDir: () => Promise<{
+        ok: boolean;
+        canceled?: boolean;
+        dir?: string;
+        files?: string[];
+        error?: string;
+      }>;
+      pluginsInstallFromDisk: (
+        server: RustServer,
+        dir: string,
+        fileName: string
+      ) => Promise<{ ok: boolean; fileName?: string; error?: string }>;
+
       configRead: (server: RustServer) => Promise<ServerConfigResult>;
       configSave: (
         server: RustServer,

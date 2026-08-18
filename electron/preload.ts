@@ -99,6 +99,11 @@ const api = {
   marketplaceInstall: (server: unknown, slug: string) =>
     ipcRenderer.invoke('marketplace:install', { server, slug }),
 
+  // --- Установка плагина с диска ---
+  pluginsPickDir: () => ipcRenderer.invoke('plugins:pick-dir'),
+  pluginsInstallFromDisk: (server: unknown, dir: string, fileName: string) =>
+    ipcRenderer.invoke('plugins:install-from-disk', { server, dir, fileName }),
+
   // --- Конфигурация server.cfg ---
   configRead: (server: unknown) => ipcRenderer.invoke('config:read', server),
   configSave: (server: unknown, config: unknown) =>

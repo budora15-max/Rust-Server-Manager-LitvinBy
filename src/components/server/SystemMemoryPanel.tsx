@@ -11,11 +11,19 @@ interface SysMemory {
 /** Период опроса системной памяти. */
 const POLL_MS = 10_000;
 
+interface SystemMemoryPanelProps {
+  serverMb: number;
+  /** Заголовок панели (по умолчанию из локали serverPage.memory.title). */
+  title?: string;
+  /** Подпись колонки «сервер/сервера» (по умолчанию serverPage.memory.server). */
+  serverLabel?: string;
+}
+
 /**
  * Панель памяти: RAM сервера (процесс), занято всеми процессами ОС и общий объём.
  * Системные значения приходят из main (os.totalmem/freemem) через IPC.
  */
-export function SystemMemoryPanel({ serverMb }: { serverMb: number }) {
+export function SystemMemoryPanel({ serverMb, title, serverLabel }: SystemMemoryPanelProps) {
   const { t } = useTranslation();
   const [mem, setMem] = useState<SysMemory | null>(null);
 
@@ -51,7 +59,7 @@ export function SystemMemoryPanel({ serverMb }: { serverMb: number }) {
     <div className="mb-6 rounded-xl border border-[#232833] bg-surface p-4">
       <div className="flex items-center justify-between gap-2">
         <span className="flex items-center gap-1.5 text-xs text-textMuted">
-          <MemoryStick className="h-3.5 w-3.5" /> {t('serverPage.memory.title')}
+          <MemoryStick className="h-3.5 w-3.5" /> {title ?? t('serverPage.memory.title')}
         </span>
         <span className="text-xs text-textMuted">
           {mem
@@ -67,7 +75,7 @@ export function SystemMemoryPanel({ serverMb }: { serverMb: number }) {
       </div>
       <div className="mt-3 grid grid-cols-3 gap-3">
         <div>
-          <span className="block text-xs text-textMuted">{t('serverPage.memory.server')}</span>
+          <span className="block text-xs text-textMuted">{serverLabel ?? t('serverPage.memory.server')}</span>
           <span className="text-sm font-bold text-textMain">{serverMb} MB</span>
         </div>
         <div>

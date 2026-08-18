@@ -81,6 +81,10 @@
     "newServerTitle": "New Server",
     "createServer": "Create",
     "noServers": "No servers yet. Click \"New Server\" to add your first one.",
+    "memory": {
+      "title": "Memory",
+      "servers": "Servers"
+    },
     "modal": {
       "name": "Name",
       "nameRequired": "Name is required.",
@@ -535,6 +539,11 @@
     "noResults": "Nothing found",
     "networkError": "uMod is unreachable. Check your internet connection.",
     "installPathNeeded": "Set the server install path in the General tab.",
+    "installFromDisk": "Install from disk",
+    "pickFolder": "Choose folder",
+    "pickFolderHint": "Choose a folder with plugins (.cs), then click the plugin to install it to the server.",
+    "noCsFiles": "No plugin files (.cs) found in the selected folder.",
+    "installedFromDisk": "Plugin \"{{name}}\" installed.",
     "openOnUmod": "Open on uMod"
   },
   "schedule": {
