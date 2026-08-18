@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, shell, Tray, webContents } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, Notification, shell, Tray, webContents } from 'electron';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -48,18 +48,29 @@ let quitting = false;
 
 const DEV_URL = 'http://localhost:3000';
 
+/**
+ * Резервная иконка трея (16×16 «щит», base64) — если build/tray.png вдруг недоступен.
+ * Тот же рисунок, что генерирует scripts/gen-icons.js.
+ */
+const TRAY_ICON_FALLBACK =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAALklEQVRjYBh+4EGYxX98mCgD1lgpYMWjBhBpAC5DiNaMHJXImkkyAN0VJGtGdwnD8AYAGZ8z1AAAAABJRU5ErkJggg==';
+
 /** Файл автозапуска на Linux (XDG autostart). */
 function linuxAutostartFile(): string {
   return path.join(os.homedir(), '.config', 'autostart', 'rust-server-manager.desktop');
 }
 
 function createWindow(): void {
+  // Иконка окна/панели задач (важно для dev-режима и Linux; в упакованном
+  // Windows-приложении иконку несёт сам exe).
+  const winIcon = nativeImage.createFromPath(path.join(app.getAppPath(), 'build', 'icon.png'));
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     minWidth: 1024,
     minHeight: 700,
     title: 'Rust Server Manager',
+    icon: winIcon.isEmpty() ? undefined : winIcon,
     backgroundColor: '#0f1115',
     autoHideMenuBar: true,
     webPreferences: {
@@ -88,9 +99,12 @@ function createWindow(): void {
 
   mainWindow.on('close', (e) => {
     // Сворачиваем в трей вместо полного закрытия — серверы продолжают работать.
-    if (!quitting) {
+    // Если трей недоступен (не создался), закрытие завершает приложение — иначе
+    // окно «застряло» бы скрытым без возможности вернуться.
+    if (!quitting && tray) {
       e.preventDefault();
       mainWindow?.hide();
+      showTrayHintOnce();
     }
   });
 
@@ -106,7 +120,28 @@ function showWindow(): void {
   mainWindow?.focus();
 }
 
+/** Одноразовая подсказка при первом сворачивании в трей: как вернуть иконку из «скрытых значков». */
+function showTrayHintOnce(): void {
+  const hintFile = path.join(app.getPath('userData'), 'tray-hint-shown');
+  try {
+    if (fs.existsSync(hintFile)) return;
+    fs.writeFileSync(hintFile, new Date().toISOString());
+  } catch {
+    return; // не критично — просто пропускаем подсказку
+  }
+  try {
+    new Notification({
+      title: 'Rust Server Manager',
+      body: 'Приложение свёрнуто в трей. Если иконка не видна — нажмите «^» рядом с часами и перетащите её на панель задач.',
+    }).show();
+  } catch {
+    /* noop */
+  }
+}
+
 app.whenReady().then(() => {
+  // AUMID нужен для системных уведомлений на Windows (иначе Notification не показывается).
+  app.setAppUserModelId('com.rustservermanager.app');
   initLocale();
   loadScheduledWipes();
   startWipeScheduler();
@@ -170,16 +205,35 @@ function formatMb(bytes: number): string {
 /** Иконка в трее + быстрые действия. Файл build/tray.png генерируется скриптом gen-icons. */
 function createTray(): void {
   if (tray) return;
+  // Диагностика: состояние трея пишется в userData/tray-debug.log.
+  const trayLog = (msg: string): void => {
+    try {
+      fs.appendFileSync(
+        path.join(app.getPath('userData'), 'tray-debug.log'),
+        `[${new Date().toISOString()}] ${msg}\n`
+      );
+    } catch {
+      /* noop */
+    }
+  };
   const iconPath = path.join(app.getAppPath(), 'build', 'tray.png');
-  let image = nativeImage.createFromPath(iconPath);
-  if (image.isEmpty()) {
-    // Прозрачный пиксель на случай, если иконка ещё не сгенерирована.
-    image = nativeImage.createFromDataURL(
-      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
-    );
+  trayLog(`appPath=${app.getAppPath()} iconPath=${iconPath} exists=${fs.existsSync(iconPath)}`);
+  try {
+    let image = nativeImage.createFromBuffer(fs.readFileSync(iconPath));
+    trayLog(`image empty=${image.isEmpty()} size=${JSON.stringify(image.getSize())}`);
+    if (image.isEmpty()) {
+      // Встроенная резервная иконка — трей всегда видимый, даже если PNG пропал.
+      image = nativeImage.createFromDataURL(TRAY_ICON_FALLBACK);
+    }
+    tray = new Tray(image.resize({ width: 16, height: 16 }));
+    tray.setToolTip('Rust Server Manager');
+    trayLog(`trayCreated=${Boolean(tray)} destroyed=${tray.isDestroyed()}`);
+  } catch (err) {
+    trayLog(`ERROR: ${String(err)}`);
+    console.error('Tray creation failed:', err);
+    tray = null;
+    return;
   }
-  tray = new Tray(image.resize({ width: 16, height: 16 }));
-  tray.setToolTip('Rust Server Manager');
   const ru = getLocale() === 'ru';
   const menu = Menu.buildFromTemplate([
     { label: 'Rust Server Manager', enabled: false },
