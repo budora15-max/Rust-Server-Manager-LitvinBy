@@ -381,16 +381,18 @@ export function startServer(server: ServerPayload): Promise<ServerStartResult> {
     ...(server.additionalArgs ? splitArgs(server.additionalArgs) : []),
   ];
 
-  // windowsHide: false — на Windows показываем консольное окно запускаемого сервера,
-  // чтобы пользователь видел, что процесс реально стартовал.
-  // stdout/stderr перехватываем и транслируем в консоль приложения (вкладка Console),
-  // потому что в окне процесса при таком запуске лог не отображается.
+  // detached: true на ВСЕХ платформах.
+  //  - Linux: отдельная группа процессов — killProcessTree(-pid) завершит всё дерево.
+  //  - Windows: выводит процесс из Job Object Electron/Chromium. Без этого флага
+  //    дочерний сервер умирает вместе с менеджером (KILL_ON_JOB_CLOSE) — тогда
+  //    «откреплённые» серверы не могут пережить закрытие менеджера.
+  // Цена: у сервера нет собственного консольного окна (DETACHED_PROCESS) — лог
+  // доступен во вкладке «Консоль» и в файле Logs/server-<identity>.log.
   const child = spawn(exe, args, {
     cwd: server.installPath,
     stdio: ['ignore', 'pipe', 'pipe'],
     windowsHide: false,
-    // На Linux отдельная группа процессов — killProcessTree(-pid) завершит всё дерево.
-    detached: process.platform !== 'win32',
+    detached: true,
   });
   // Метаданные записываем сразу — forwardProcessLog/appendToLogFile используют
   // их для определения пути файла лога.
