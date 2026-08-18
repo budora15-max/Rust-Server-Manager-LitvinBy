@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Camera, ImageOff, Map as MapIcon, RefreshCw } from 'lucide-react';
+import { Camera, ExternalLink, ImageOff, Map as MapIcon, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/Button';
 import type { RustServer } from '@/types';
 
@@ -86,6 +86,18 @@ export function MapTab({ server }: { server: RustServer }) {
 
   const isOnline = server.status === 'online' || server.status === 'sim';
 
+  // Полноценная карта мира по сиду доступна на rustmaps.com (рендер ландшафта).
+  // Работает для Procedural Map; локально Rust такой PNG не сохраняет.
+  const isProcedural = !server.map || /procedural/i.test(server.map);
+  const rustmapsUrl =
+    isProcedural && server.seed > 0
+      ? `https://rustmaps.com/map/${server.seed}_${server.worldSize > 0 ? server.worldSize : 4000}`
+      : null;
+
+  const openExternal = (url: string) => {
+    window.rustManager?.openExternal(url).catch(() => {});
+  };
+
   return (
     <div className="rounded-xl border border-[#232833] bg-surface p-5">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -97,6 +109,12 @@ export function MapTab({ server }: { server: RustServer }) {
           {preview && <span className="text-xs text-textMuted">{preview.fileName}</span>}
         </div>
         <div className="flex items-center gap-2">
+          {rustmapsUrl && (
+            <Button size="sm" variant="ghost" onClick={() => openExternal(rustmapsUrl)}>
+              <ExternalLink className="h-3.5 w-3.5" />
+              {t('serverPage.map.openExternal')}
+            </Button>
+          )}
           <Button size="sm" variant="secondary" disabled={loading} onClick={() => void load()}>
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
             {t('serverPage.map.refresh')}
@@ -138,6 +156,29 @@ export function MapTab({ server }: { server: RustServer }) {
             </p>
           </div>
           {errorText() && <p className="text-xs text-amber-400">{errorText()}</p>}
+        </div>
+      )}
+
+      {rustmapsUrl && (
+        <div className="mt-4">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-textMuted">
+              {t('serverPage.map.worldMap')}
+            </span>
+            <button
+              type="button"
+              className="text-xs text-accent transition-colors hover:underline"
+              onClick={() => openExternal(rustmapsUrl)}
+            >
+              {t('serverPage.map.openExternal')}
+            </button>
+          </div>
+          <iframe
+            src={rustmapsUrl}
+            title="rustmaps.com"
+            className="h-[420px] w-full rounded-lg border border-[#232833] bg-[#1a1e26]"
+            sandbox="allow-scripts allow-same-origin allow-popups"
+          />
         </div>
       )}
     </div>

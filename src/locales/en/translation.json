@@ -167,6 +167,8 @@
       "captured": "Map captured — the preview will refresh in a few seconds.",
       "empty": "No map preview yet.",
       "emptyHint": "Start the server and press \"Capture map\" — the server will render the map image (spawn.ore_map) and save it into server/<identity>/debug/.",
+      "worldMap": "World map by seed (rustmaps.com)",
+      "openExternal": "Open in browser",
       "offline": "Server is not running — start it first.",
       "noInstall": "Server install folder is not set — map preview is unavailable.",
       "error": "Failed to load map: {{error}}"
