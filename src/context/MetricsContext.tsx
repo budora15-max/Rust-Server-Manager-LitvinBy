@@ -74,9 +74,7 @@ export function MetricsProvider({ children }: { children: ReactNode }) {
             maxPlayers: s.maxPlayers,
             fps: last ? jitter(last.fps, 10) : 60,
             cpu: last ? jitter(last.cpu, 12) : s.cpu,
-            memoryMb: last
-              ? jitter(last.memoryMb, 200)
-              : Math.round((s.ram / 100) * 8192),
+            memoryMb: last ? jitter(last.memoryMb, 200) : 0,
             uptimeSeconds: last ? last.uptimeSeconds + 5 : s.uptimeSeconds,
             at: now,
           };

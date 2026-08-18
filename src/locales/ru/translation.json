@@ -71,7 +71,6 @@
     "playersValue": "{{current}} / {{max}}",
     "cpu": "CPU",
     "ram": "RAM",
-    "ramOf": "{{pct}}% от 8 ГБ",
     "uptime": "Аптайм",
     "pluginsCount": "{{count}} плагинов",
     "start": "Запустить",

@@ -7,6 +7,7 @@ import { StatusBadge } from '@/components/StatusBadge';
 import { Button } from '@/components/Button';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { useServer } from '@/context/ServerContext';
+import { useMetrics } from '@/context/MetricsContext';
 import { cn } from '@/lib/utils';
 
 interface PendingAction {
@@ -16,6 +17,7 @@ interface PendingAction {
 
 export default function ServersPage() {
   const { servers, startServer, stopServer, restartServer, removeServer } = useServer();
+  const metrics = useMetrics();
   const { t } = useTranslation();
   const [pending, setPending] = useState<PendingAction | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -64,6 +66,8 @@ export default function ServersPage() {
             {servers.map((server) => {
               const transitioning = server.status === 'starting' || server.status === 'stopping';
               const isOnline = server.status === 'online' || server.status === 'sim';
+              const sample = metrics[server.id];
+              const liveMetrics = isOnline && sample !== undefined;
               const playersPct =
                 server.maxPlayers > 0
                   ? Math.round((server.onlinePlayers / server.maxPlayers) * 100)
@@ -110,8 +114,9 @@ export default function ServersPage() {
                   </td>
                   <td className="hidden px-4 py-3.5 lg:table-cell">
                     <span className="flex items-center gap-1.5 text-textMuted">
-                      <Cpu className="h-3.5 w-3.5" /> {server.cpu}%
-                      <MemoryStick className="ml-3 h-3.5 w-3.5" /> {server.ram}%
+                      <Cpu className="h-3.5 w-3.5" /> {liveMetrics ? `${sample.cpu}%` : '—'}
+                      <MemoryStick className="ml-3 h-3.5 w-3.5" />{' '}
+                      {liveMetrics ? `${sample.memoryMb} MB` : '—'}
                     </span>
                   </td>
                   <td className="px-4 py-3.5">

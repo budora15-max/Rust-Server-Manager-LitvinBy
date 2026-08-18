@@ -71,7 +71,6 @@
     "playersValue": "{{current}} / {{max}}",
     "cpu": "CPU",
     "ram": "RAM",
-    "ramOf": "{{pct}}% of 8 GB",
     "uptime": "Uptime",
     "pluginsCount": "{{count}} plugins",
     "start": "Start",

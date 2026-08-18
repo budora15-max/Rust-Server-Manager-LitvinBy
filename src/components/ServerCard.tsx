@@ -34,7 +34,8 @@ export function ServerCard({ server }: { server: RustServer }) {
   // он выглядит как текущая нагрузка, хотя процесса уже нет.
   const liveMetrics = online && sample !== undefined;
   const cpu = liveMetrics ? sample.cpu : 0;
-  const ramPct = liveMetrics ? Math.min(100, Math.round((sample.memoryMb / 8192) * 100)) : 0;
+  // Показываем только фактически занятую память процесса сервера: сколько всего
+  // выделено серверу — неизвестно, поэтому процент от какого-либо объёма не показываем.
   const ramText = liveMetrics ? `${sample.memoryMb} MB` : '0 MB';
   const uptime = liveMetrics ? sample.uptimeSeconds : 0;
 
@@ -99,7 +100,6 @@ export function ServerCard({ server }: { server: RustServer }) {
             <MemoryStick className="h-3.5 w-3.5" /> {t('dashboard.ram')}
           </div>
           <p className="mt-1 text-lg font-bold text-textMain">{ramText}</p>
-          <p className="text-xs text-textMuted">{t('dashboard.ramOf', { pct: ramPct })}</p>
         </div>
       </div>
 

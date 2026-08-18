@@ -23,11 +23,16 @@ export function MetricsChart({
   const width = 100;
   const height = 32;
   const lastPoints = data.slice(-24);
+  // Шкала по умолчанию 100 (проценты); если данные больше — график автоматически
+  // масштабируется по фактическому максимуму (например, RAM в МБ без жёсткой
+  // привязки к «8 ГБ» — сколько всего выделено серверу, неизвестно).
+  const dataMax = lastPoints.reduce((m, v) => Math.max(m, v), 0);
+  const scaleMax = Math.max(max, dataMax, 1);
 
   const points = lastPoints
     .map((v, i) => {
       const x = (i / Math.max(1, lastPoints.length - 1)) * width;
-      const y = height - (Math.min(max, Math.max(0, v)) / max) * height;
+      const y = height - (Math.min(scaleMax, Math.max(0, v)) / scaleMax) * height;
       return `${x.toFixed(1)},${y.toFixed(1)}`;
     })
     .join(' ');

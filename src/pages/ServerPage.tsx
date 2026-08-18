@@ -437,7 +437,6 @@ function ServerMetrics({ serverId }: { serverId: string }) {
         label={t('serverPage.metrics.ram')}
         value={sample ? `${sample.memoryMb} MB` : '—'}
         data={history.map((h) => h.memoryMb)}
-        max={8192}
         color="#a78bfa"
       />
     </div>
