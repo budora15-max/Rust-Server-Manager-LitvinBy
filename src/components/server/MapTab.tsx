@@ -110,12 +110,6 @@ export function MapTab({ server }: { server: RustServer }) {
           {preview && <span className="text-xs text-textMuted">{preview.fileName}</span>}
         </div>
         <div className="flex items-center gap-2">
-          {rustmapsUrl && (
-            <Button size="sm" variant="ghost" onClick={() => openExternal(rustmapsUrl)}>
-              <ExternalLink className="h-3.5 w-3.5" />
-              {t('serverPage.map.openExternal')}
-            </Button>
-          )}
           <Button size="sm" variant="secondary" disabled={loading} onClick={() => void load()}>
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
             {t('serverPage.map.refresh')}
@@ -161,25 +155,20 @@ export function MapTab({ server }: { server: RustServer }) {
       )}
 
       {rustmapsUrl && (
-        <div className="mt-4">
-          <div className="mb-2 flex items-center justify-between gap-2">
-            <span className="text-xs font-medium text-textMuted">
+        <div className="mt-4 flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-[#2a2f3a] bg-[#1a1e26] px-6 py-10 text-center">
+          <MapIcon className="h-8 w-8 text-textMuted" />
+          <div>
+            <p className="text-sm font-medium text-textMain">
               {t('serverPage.map.worldMap')}
-            </span>
-            <button
-              type="button"
-              className="text-xs text-accent transition-colors hover:underline"
-              onClick={() => openExternal(rustmapsUrl)}
-            >
-              {t('serverPage.map.openExternal')}
-            </button>
+            </p>
+            <p className="mt-1 max-w-md text-xs text-textMuted">
+              {t('serverPage.map.worldMapHint')}
+            </p>
           </div>
-          <iframe
-            src={rustmapsUrl}
-            title="rustmaps.com"
-            className="h-[420px] w-full rounded-lg border border-[#232833] bg-[#1a1e26]"
-            sandbox="allow-scripts allow-same-origin allow-popups"
-          />
+          <Button size="sm" variant="secondary" onClick={() => openExternal(rustmapsUrl)}>
+            <ExternalLink className="h-3.5 w-3.5" />
+            {t('serverPage.map.openExternal')}
+          </Button>
         </div>
       )}
     </div>

@@ -168,7 +168,8 @@
       "empty": "No map preview yet.",
       "emptyHint": "Start the server and press \"Capture map\" — the server will render the map image (spawn.ore_map) and save it into server/<identity>/debug/.",
       "worldMap": "World map by seed (rustmaps.com)",
-      "openExternal": "Open in browser",
+      "worldMapHint": "In modern Rust versions the full world map is not saved locally — open it by seed on rustmaps.com.",
+      "openExternal": "Open on rustmaps.com",
       "offline": "Server is not running — start it first.",
       "noInstall": "Server install folder is not set — map preview is unavailable.",
       "error": "Failed to load map: {{error}}"
