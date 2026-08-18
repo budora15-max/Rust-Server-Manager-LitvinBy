@@ -14,6 +14,7 @@ interface NewServerModalProps {
 interface NewServerForm {
   name: string;
   identity: string;
+  gamemode: string;
   port: string;
   maxPlayers: string;
   seed: string;
@@ -24,6 +25,7 @@ interface NewServerForm {
 const INITIAL: NewServerForm = {
   name: '',
   identity: '',
+  gamemode: '',
   port: '28015',
   maxPlayers: '100',
   seed: '',
@@ -46,6 +48,11 @@ export function NewServerModal({ open, onClose }: NewServerModalProps) {
   const validate = (): boolean => {
     const next: Partial<NewServerForm> = {};
     if (!form.name.trim()) next.name = t('dashboard.modal.nameRequired');
+    else {
+      const hasCyrillic = /[а-яё]/i.test(form.name);
+      const limit = hasCyrillic ? 32 : 64;
+      if (form.name.trim().length > limit) next.name = t('general.errors.nameTooLong', { limit });
+    }
     if (!form.identity.trim()) next.identity = t('dashboard.modal.identityRequired');
 
     const port = Number(form.port);
@@ -57,7 +64,7 @@ export function NewServerModal({ open, onClose }: NewServerModalProps) {
       next.maxPlayers = t('general.errors.maxPlayersInvalid');
 
     const worldSize = Number(form.worldSize);
-    if (!form.worldSize || !Number.isInteger(worldSize) || worldSize < 500 || worldSize > 8000)
+    if (!form.worldSize || !Number.isInteger(worldSize) || worldSize < 1000 || worldSize > 6000)
       next.worldSize = t('general.errors.worldSizeInvalid');
 
     setErrors(next);
@@ -71,6 +78,7 @@ export function NewServerModal({ open, onClose }: NewServerModalProps) {
     const input: NewServerInput = {
       name: form.name.trim(),
       identity: form.identity.trim(),
+      gamemode: form.gamemode,
       port: Number(form.port),
       maxPlayers: Number(form.maxPlayers),
       worldSize: Number(form.worldSize),
@@ -126,11 +134,36 @@ export function NewServerModal({ open, onClose }: NewServerModalProps) {
             error={errors.worldSize}
           />
         </div>
-        <Input
-          label={t('dashboard.modal.map')}
-          value={form.map}
-          onChange={(e) => set('map')(e.target.value)}
-        />
+        <div>
+          <label htmlFor="modal-gamemode" className="mb-1.5 block text-sm font-medium text-textMain">
+            {t('general.gamemodeLabel')}
+          </label>
+          <select
+            id="modal-gamemode"
+            value={form.gamemode}
+            onChange={(e) => set('gamemode')(e.target.value)}
+            className="h-11 w-full rounded-lg border border-[#2a2f3a] bg-[#1a1e26] px-3 text-sm text-textMain transition-colors hover:border-[#3a4150] focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/25"
+          >
+            <option value="">{t('general.gamemodes.none')}</option>
+            <option value="softcore">{t('general.gamemodes.softcore')}</option>
+            <option value="hardcore">{t('general.gamemodes.hardcore')}</option>
+            <option value="primitive">{t('general.gamemodes.primitive')}</option>
+          </select>
+        </div>
+        <div>
+          <label htmlFor="modal-level" className="mb-1.5 block text-sm font-medium text-textMain">
+            {t('dashboard.modal.map')}
+          </label>
+          <select
+            id="modal-level"
+            value={form.map}
+            onChange={(e) => set('map')(e.target.value)}
+            className="h-11 w-full rounded-lg border border-[#2a2f3a] bg-[#1a1e26] px-3 text-sm text-textMain transition-colors hover:border-[#3a4150] focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/25"
+          >
+            <option value="Procedural Map">{t('general.levelProcedural')}</option>
+            <option value="CraggyIsland">CraggyIsland</option>
+          </select>
+        </div>
 
         <div className="flex justify-end gap-3 pt-2">
           <Button type="button" variant="secondary" onClick={onClose}>

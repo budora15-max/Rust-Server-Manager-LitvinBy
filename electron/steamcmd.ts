@@ -86,6 +86,7 @@ export async function updateRustServer(
           'anonymous',
           '+app_update',
           RUST_APP_ID,
+          ...(server.steamBetaBranch ? ['-beta', server.steamBetaBranch] : []),
           'validate',
           '+quit',
         ],

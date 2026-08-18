@@ -36,6 +36,7 @@ interface ServerContextValue {
 export interface NewServerInput {
   name: string;
   identity: string;
+  gamemode?: string;
   port?: number;
   maxPlayers?: number;
   seed?: number;
@@ -83,6 +84,35 @@ export function ServerProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     window.rustManager?.syncServers(servers);
   }, [servers]);
+
+  // Базовый подсчёт плагинов (installedPlugins) для карточек и «Свойств сервера»
+  // при старте менеджера — чтобы не показывать 0 при реально установленных плагинах.
+  useEffect(() => {
+    const bridge = window.rustManager;
+    if (!bridge) return;
+    let stale = false;
+    void (async () => {
+      for (const s of serversRef.current) {
+        if (!s.installPath) continue;
+        try {
+          const res = await bridge.pluginsList(s);
+          if (!stale && res?.ok && Array.isArray(res.plugins) && s.installedPlugins !== res.plugins.length) {
+            const count = res.plugins.length;
+            setServers((prev) =>
+              prev.map((x) =>
+                x.id === s.id && x.installedPlugins !== count ? { ...x, installedPlugins: count } : x
+              )
+            );
+          }
+        } catch {
+          // IPC недоступен (браузерное демо) — пропускаем
+        }
+      }
+    })();
+    return () => {
+      stale = true;
+    };
+  }, []);
 
   const setStatus = (id: string, status: RustServer['status']) =>
     setServers((prev) => prev.map((s) => (s.id === id ? { ...s, status } : s)));
@@ -352,6 +382,7 @@ export function ServerProvider({ children }: { children: ReactNode }) {
       id: `srv_${Date.now()}`,
       name: input.name.trim() || 'Unnamed Server',
       identity: input.identity.trim() || 'server',
+      gamemode: input.gamemode?.trim() || '',
       status: 'offline',
       onlinePlayers: 0,
       maxPlayers: input.maxPlayers ?? 100,
@@ -367,6 +398,11 @@ export function ServerProvider({ children }: { children: ReactNode }) {
       installPath: '',
       rconHost: '127.0.0.1',
       rconPort: port + 2,
+      tickrate: 30,
+      queryport: port + 1,
+      password: '',
+      eac: true,
+      steamBetaBranch: '',
       autoRestartOnCrash: true,
       autoRestartOnHang: false,
       hangTimeoutMinutes: 10,

@@ -19,6 +19,19 @@ const execFileAsync = promisify(execFile) as (
 const EXE_NAMES = ['RustDedicatedServer.exe', 'RustDedicated.exe'];
 const EXE_LABEL = EXE_NAMES.join(' / ');
 
+/** Разбор дополнительных аргументов запуска с учётом кавычек. */
+function splitArgs(input: string): string[] {
+  const tokens: string[] = [];
+  const re = /"([^"]*)"|'([^']*)'|(\S+)/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(input))) {
+    if (m[1] !== undefined) tokens.push(m[1]);
+    else if (m[2] !== undefined) tokens.push(m[2]);
+    else if (m[3]) tokens.push(m[3]);
+  }
+  return tokens;
+}
+
 const processes = new Map<string, ChildProcess>();
 
 /** PID сервера, запущенного вне менеджера (обнаружен через список процессов ОС). */
@@ -333,6 +346,11 @@ export function startServer(server: ServerPayload): Promise<ServerStartResult> {
     String(server.rconPort || server.port + 2),
     '+rcon.web',
     '1',
+    // Конвар gamemode ('', softcore, hardcore, ...) — дублируется и в server.cfg.
+    // Пустое значение не передаём: игра сама прочитает server.cfg с `gamemode ""`.
+    ...(server.gamemode ? ['+gamemode', server.gamemode] : []),
+    // Дополнительные аргументы строки запуска (свободный текст администратора).
+    ...(server.additionalArgs ? splitArgs(server.additionalArgs) : []),
   ];
 
   // windowsHide: false — на Windows показываем консольное окно запускаемого сервера,

@@ -47,9 +47,10 @@ export function serverPorts(server: ServerPayload): Array<{
 }> {
   const base = Number(server.port) || 28015;
   const rcon = Number(server.rconPort) || base + 2;
+  const query = Number(server.queryport) || base + 1;
   return [
     { key: 'game', label: 'Game (server.port)', port: base, protocol: 'UDP' },
-    { key: 'query', label: 'Query (server.queryport)', port: base + 1, protocol: 'UDP' },
+    { key: 'query', label: 'Query (server.queryport)', port: query, protocol: 'UDP' },
     { key: 'rcon', label: 'WebRcon (rcon.port)', port: rcon, protocol: 'TCP' },
   ];
 }

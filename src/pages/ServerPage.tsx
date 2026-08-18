@@ -107,6 +107,25 @@ export default function ServerPage() {
     return unsubscribe;
   }, [server?.id]);
 
+  // Синхронизация счётчика плагинов (для «Свойств сервера» и карточек на дашборде).
+  useEffect(() => {
+    const bridge = window.rustManager;
+    if (!bridge || !server?.installPath) return;
+    let stale = false;
+    bridge
+      .pluginsList(server)
+      .then((res) => {
+        if (stale || !res?.ok || !Array.isArray(res.plugins)) return;
+        const count = res.plugins.length;
+        if (server.installedPlugins !== count) updateServer(server.id, { installedPlugins: count });
+      })
+      .catch(() => {});
+    return () => {
+      stale = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [server?.id]);
+
   if (!server) {
     return (
       <AppShell>

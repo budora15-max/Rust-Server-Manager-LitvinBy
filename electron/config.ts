@@ -27,6 +27,7 @@ const DEFAULT_CONFIG: Record<string, string> = {
   'server.maxplayers': '100',
   'server.port': '28015',
   'server.tickrate': '30',
+  'server.saveinterval': '300',
   'rcon.port': '28017',
   'rcon.password': 'changeme',
   'rcon.web': '1',

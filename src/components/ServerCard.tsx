@@ -57,6 +57,9 @@ export function ServerCard({ server }: { server: RustServer }) {
           </Link>
           <p className="mt-0.5 truncate text-xs text-textMuted">
             {server.map} · {server.identity}
+            {server.gamemode ? (
+              <span> · {t(`general.gamemodes.${server.gamemode}`, { defaultValue: server.gamemode })}</span>
+            ) : null}
           </p>
         </div>
         <StatusBadge status={server.status} />

@@ -11,8 +11,8 @@ import { getMarketplaceList, installMarketplacePlugin, searchMarketplace } from 
 import { sendWebhookEvent, sendWebhookTest, saveWebhookConfig, loadWebhookConfig, type WebhookConfig } from './discord';
 import { getLocale, initLocale, setLocale } from './locale';
 import { createWorldBackup, deleteWorldBackup, listWorldBackups, restoreWorldBackup } from './backup';
-import { restartServer, setOnProcessExit, setOnServerLog, startServer, statusOf, stopAll, stopServer, findExecutableInfo, detectExternalServers, readServerLogTail, readServerLogFile, setOnAutoRestart, setOnServerRunning, isProcessRunning } from './rust-process';
-import type { PluginInfo, RconConnectPayload, ScheduledWipeEntry, ServerPayload, WipeOptions, WipeResult } from './types';
+import { setOnProcessExit, setOnServerLog, startServer, statusOf, stopAll, stopServer, findExecutableInfo, detectExternalServers, readServerLogTail, readServerLogFile, setOnAutoRestart, setOnServerRunning, isProcessRunning } from './rust-process';
+import type { PluginInfo, RconConnectPayload, ScheduledWipeEntry, ServerPayload, ServerStartResult, WipeOptions, WipeResult } from './types';
 import type { BackupScheduleInput, RestartScheduleInput, ScheduledTask } from './types';
 import { TaskScheduler, type TaskActions } from './tasks';
 import { appendMetric, readMetricsHistory } from './metrics-history';
@@ -213,8 +213,8 @@ function taskSchedulerActions(): TaskActions {
         : 'Not running — nothing to restart';
       if (wasRunning) {
         stopServer(server.id);
-        // Даём портам освободиться и поднимаем сервер заново.
-        setTimeout(() => void startServer(server), 5000);
+        // Даём портам освободиться и поднимаем сервер заново (с автообновлением при флаге).
+        setTimeout(() => void startServerWithAutoUpdate(server), 5000);
       }
       taskScheduler.save();
       broadcast('tasks:changed', {});
@@ -497,6 +497,7 @@ function startWipeScheduler(): void {
 /** Поля сервера для экспорта/импорта конфигурации (без транзиентного состояния). */
 const EXPORT_FIELDS: Array<keyof ServerPayload> = [
   'identity',
+  'gamemode',
   'name',
   'installPath',
   'port',
@@ -507,6 +508,22 @@ const EXPORT_FIELDS: Array<keyof ServerPayload> = [
   'rconPort',
   'rconPassword',
   'map',
+  'levelurl',
+  'tags',
+  'wipeFrequencyTag',
+  'regionTag',
+  'description',
+  'url',
+  'headerImage',
+  'logoImage',
+  'saveInterval',
+  'additionalArgs',
+  'autoUpdateOnRestart',
+  'tickrate',
+  'queryport',
+  'password',
+  'eac',
+  'steamBetaBranch',
   'autoRestartOnCrash',
   'autoRestartOnHang',
   'hangTimeoutMinutes',
@@ -522,10 +539,64 @@ function pickServerFields(s: ServerPayload): Partial<ServerPayload> {
   return out;
 }
 
+/**
+ * Автообновление сервера и Oxide перед запуском (по флагу autoUpdateOnRestart).
+ * Прогресс транслируется в тот же канал, что и ручное обновление (server:update-progress).
+ */
+async function maybeAutoUpdate(server: ServerPayload): Promise<{ ok: boolean; error?: string }> {
+  if (!server.autoUpdateOnRestart || !server.installPath) return { ok: true };
+  const ru = getLocale() === 'ru';
+  try {
+    broadcast('server:update-progress', {
+      serverId: server.id,
+      message: ru ? 'Автообновление: обновление сервера…' : 'Auto-update: updating server…',
+      pct: 0,
+    });
+    const upd = await updateRustServer(server, (message, pct) =>
+      broadcast('server:update-progress', { serverId: server.id, message, pct })
+    );
+    if (!upd.ok) return { ok: false, error: `Auto-update failed: ${upd.error}` };
+    const mods = await getModsStatus(server);
+    if (mods.oxide.installed) {
+      broadcast('server:update-progress', {
+        serverId: server.id,
+        message: ru ? 'Автообновление: обновление Oxide…' : 'Auto-update: updating Oxide…',
+        pct: 90,
+      });
+      const oxide = await installOxide(server);
+      if (!oxide.installed) {
+        return { ok: false, error: `Oxide auto-update failed: ${oxide.error}` };
+      }
+    }
+    broadcast('server:update-progress', {
+      serverId: server.id,
+      message: ru ? 'Автообновление завершено' : 'Auto-update finished',
+      pct: 100,
+    });
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+/** Запуск сервера: при флаге autoUpdateOnRestart сначала обновляем игру и Oxide. */
+async function startServerWithAutoUpdate(server: ServerPayload): Promise<ServerStartResult> {
+  const pre = await maybeAutoUpdate(server);
+  if (!pre.ok) return { success: false, mode: 'real', error: pre.error ?? 'Auto-update failed' };
+  return startServer(server);
+}
+
+/** Перезапуск сервера с автообновлением (аналог restartServer + maybeAutoUpdate). */
+async function restartServerWithAutoUpdate(server: ServerPayload): Promise<ServerStartResult> {
+  stopServer(server.id);
+  await new Promise((r) => setTimeout(r, 1500));
+  return startServerWithAutoUpdate(server);
+}
+
 function registerIpc(): void {
   // --- Управление процессами Rust-серверов ---
   ipcMain.handle('server:start', async (_event, server: ServerPayload) => {
-    const result = await startServer(server);
+    const result = await startServerWithAutoUpdate(server);
     if (result.success && result.mode === 'real') {
       metricsCollector.start(server, result.pid);
     }
@@ -570,7 +641,7 @@ function registerIpc(): void {
   });
   ipcMain.handle('server:restart', async (_event, server: ServerPayload) => {
     metricsCollector.stop(server.id);
-    const result = await restartServer(server);
+    const result = await restartServerWithAutoUpdate(server);
     if (result.success && result.mode === 'real') {
       metricsCollector.start(server, result.pid);
     }

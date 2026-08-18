@@ -4,6 +4,7 @@ import { AlertTriangle, FileCode2, FileJson, Plug, Power, RefreshCw, ScanLine, T
 import type { PluginInfo, PluginUpdateStatus, PluginsListResult, RustServer } from '@/types';
 import { Button } from '@/components/Button';
 import { ConfirmModal } from '@/components/ConfirmModal';
+import { useServer } from '@/context/ServerContext';
 import { cn } from '@/lib/utils';
 
 const DEMO_PLUGINS: PluginInfo[] = [
@@ -48,6 +49,7 @@ export function PluginsTab({ server }: { server: RustServer }) {
   const bridge = window.rustManager;
   const demoMode = !bridge;
   const { t } = useTranslation();
+  const { updateServer } = useServer();
   const cacheKey = `rsm.pluginUpdates.${server.id}`;
 
   const [plugins, setPlugins] = useState<PluginInfo[]>(() => loadCachedPlugins(cacheKey) ?? []);
@@ -75,12 +77,20 @@ export function PluginsTab({ server }: { server: RustServer }) {
       setPlugins(DEMO_PLUGINS);
       setResult(null);
       setLoading(false);
+      if (server.installedPlugins !== DEMO_PLUGINS.length) {
+        updateServer(server.id, { installedPlugins: DEMO_PLUGINS.length });
+      }
       return;
     }
     setLoading(true);
     try {
       const listRes = await bridge.pluginsList(server);
       setResult(listRes);
+
+      // Синхронизируем счётчик плагинов для «Свойств сервера» и карточек на дашборде.
+      if (listRes.ok && server.installedPlugins !== listRes.plugins.length) {
+        updateServer(server.id, { installedPlugins: listRes.plugins.length });
+      }
 
       // Проверка версий может временно падать (сеть/rate-limit) —
       // в этом случае сохраняем прежние бейджи обновлений.
