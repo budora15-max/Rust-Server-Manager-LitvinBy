@@ -4,7 +4,7 @@ import { app } from 'electron';
 
 export type AppLocale = 'ru' | 'en';
 
-let cachedLocale: AppLocale = 'ru';
+let cachedLocale: AppLocale = 'en';
 
 function localePath(): string {
   return path.join(app.getPath('userData'), 'locale.json');
@@ -29,7 +29,7 @@ export function initLocale(): void {
     const parsed = JSON.parse(raw) as { locale?: string };
     cachedLocale = parsed.locale === 'en' ? 'en' : 'ru';
   } catch {
-    cachedLocale = 'ru';
+    cachedLocale = 'en';
   }
 }
 

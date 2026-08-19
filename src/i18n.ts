@@ -20,7 +20,7 @@ i18n
       ru: { translation: ru },
       en: { translation: en },
     },
-    lng: 'ru',
+    lng: 'en',
     fallbackLng: 'en',
     supportedLngs: ['ru', 'en'],
     interpolation: {
