@@ -50,6 +50,7 @@ function formatCfgLine(key: string, value: string): string {
   return `${key} ${formatCfgValue(value)}`;
 }
 
+// значения с пробелами без кавычек ломают Procedural — чиним перед стартом
 export function sanitizeServerConfig(server: ServerPayload): boolean {
   const cfgPath = configPath(server);
   if (!cfgPath || !fs.existsSync(cfgPath)) return false;

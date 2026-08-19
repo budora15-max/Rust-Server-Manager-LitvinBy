@@ -309,6 +309,7 @@ export function startServer(server: ServerPayload): Promise<ServerStartResult> {
   try {
     sanitizeServerConfig(server);
   } catch {
+    // если починить не вышло — сервер и так стартует
   }
 
   const args = [

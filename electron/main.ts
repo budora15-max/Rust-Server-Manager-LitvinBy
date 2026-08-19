@@ -192,6 +192,7 @@ const rconManager = new RconManager();
 
 let cachedServers: ServerPayload[] = [];
 
+// шлём команду в RCON, при необходимости поднимаем коннект
 async function ensureRconSend(server: ServerPayload, command: string): Promise<boolean> {
   if (rconManager.isConnected(server.id)) return rconManager.send(server.id, command).ok;
   try {
@@ -305,6 +306,7 @@ function findRustEditDll(): string | null {
   return null;
 }
 
+// иконка трея; если файл в asar битый — подставляем вшитый щит
 function createTray(): void {
   if (tray) return;
   const trayLog = (msg: string): void => {

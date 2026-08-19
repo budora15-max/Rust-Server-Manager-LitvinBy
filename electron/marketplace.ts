@@ -25,6 +25,7 @@ interface DbPlugin {
   downloads: number;
 }
 
+// встроенный каталог — не дёргаем uMod API, просто отдаём статичный список
 const MARKETPLACE_DB: DbPlugin[] = [
   { slug: 'image-library', name: 'ImageLibrary', author: 'MJSU', category: 'Libraries', downloads: 1800000, description_ru: 'Библиотека изображений и иконок для других плагинов.', description_en: 'Image and icon library used by many other plugins.' },
   { slug: 'nteleportation', name: 'NTeleportation', author: 'VisEntities', category: 'Teleport', downloads: 2200000, description_ru: 'Телепортация: дома, точки, телепорт к игроку и по запросу.', description_en: 'Teleportation: homes, points, player teleport and TPR requests.' },

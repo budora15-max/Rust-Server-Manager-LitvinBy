@@ -16,6 +16,7 @@ export interface ModsStatusResult {
   oxide: ModStatus;
 }
 
+// официальный источник Oxide: zip с umod.org, версия — из games/rust.json
 const OXIDE_ZIP_URL = 'https://umod.org/games/rust/download';
 const OXIDE_META_URL = 'https://umod.org/games/rust.json';
 

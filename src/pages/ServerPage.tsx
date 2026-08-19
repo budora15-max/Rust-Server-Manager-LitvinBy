@@ -417,6 +417,7 @@ export default function ServerPage() {
   );
 }
 
+// блок живых метрик сервера (игроки, fps, cpu, ram)
 function ServerMetrics({ serverId }: { serverId: string }) {
   const { t } = useTranslation();
   const metrics = useMetrics();

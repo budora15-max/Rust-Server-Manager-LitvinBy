@@ -29,6 +29,7 @@ export function ServerCard({ server }: { server: RustServer }) {
   const maxPlayers = sample?.maxPlayers ?? server.maxPlayers;
   const playersPct = maxPlayers > 0 ? Math.round((onlinePlayers / maxPlayers) * 100) : 0;
 
+  // живые цифры только пока процесс реально крутится — старый сэмпл сессии не показываем
   const liveMetrics = online && sample !== undefined;
   const cpu = liveMetrics ? sample.cpu : 0;
   const ramText = liveMetrics ? `${sample.memoryMb} MB` : '0 MB';

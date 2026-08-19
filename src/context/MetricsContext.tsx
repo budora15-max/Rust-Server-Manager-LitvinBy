@@ -34,6 +34,7 @@ export function MetricsProvider({ children }: { children: ReactNode }) {
     return unsubscribe;
   }, []);
 
+  // без Electron (браузерное демо) фабрикуем метрики сами, в приложении их шлёт main
   useEffect(() => {
     if (window.rustManager) return;
     const timer = setInterval(() => {

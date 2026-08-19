@@ -17,7 +17,7 @@ const TICK_MS = 5_000;
 const RCON_POLL_TICKS = 2;
 const RCON_RECONNECT_MS = 30_000;
 const AUTH_BACKOFF_MS = 10 * 60_000;
-const AUTH_FAIL_LIMIT = 3;
+const AUTH_FAIL_LIMIT = 3; // после пары неудач не долбим RCON ещё 10 минут
 
 interface ParsedServerInfo {
   online: number;
