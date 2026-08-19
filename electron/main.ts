@@ -11,7 +11,18 @@ import { readServerConfig, saveServerConfig } from './config';
 import { checkPluginUpdates, deletePlugin, listPlugins, readPluginConfig, savePluginConfig, setPluginEnabled, updateAllPlugins, updatePlugin } from './plugins';
 import { cancelUpdate, updateRustServer, type SteamProgressEvent } from './steamcmd';
 import { getMarketplaceList, installMarketplacePlugin, searchMarketplace } from './marketplace';
-import { sendWebhookEvent, sendWebhookTest, saveWebhookConfig, loadWebhookConfig, type WebhookConfig } from './discord';
+import {
+  loadTelegramConfig,
+  loadWebhookConfig,
+  saveTelegramConfig,
+  saveWebhookConfig,
+  sendTelegramEvent,
+  sendTelegramTest,
+  sendWebhookEvent,
+  sendWebhookTest,
+  type TelegramConfig,
+  type WebhookConfig,
+} from './alerts';
 import { getLocale, initLocale, setLocale } from './locale';
 import { createWorldBackup, deleteWorldBackup, listWorldBackups, restoreWorldBackup } from './backup';
 import { setOnProcessExit, setOnServerLog, startServer, statusOf, stopAll, stopServer, findExecutableInfo, detectExternalServers, readServerLogTail, readServerLogFile, setOnAutoRestart, setOnServerRunning, isProcessRunning } from './rust-process';
@@ -27,13 +38,6 @@ import {
   pushNotification,
   setNotificationBroadcast,
 } from './notifications';
-import {
-  loadTelegramConfig,
-  saveTelegramConfig,
-  sendTelegramEvent,
-  sendTelegramTest,
-  type TelegramConfig,
-} from './telegram';
 import {
   checkLocalPorts,
   closeFirewallPort,

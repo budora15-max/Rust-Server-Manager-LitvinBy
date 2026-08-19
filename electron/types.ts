@@ -143,16 +143,6 @@ export interface MarketplacePlugin {
   url?: string;
 }
 
-export type WebhookEventType = 'server-start' | 'server-stop' | 'server-crash' | 'server-wipe';
-
-export interface WebhookConfig {
-  url: string;
-  notifyStart: boolean;
-  notifyStop: boolean;
-  notifyCrash: boolean;
-  notifyWipe: boolean;
-}
-
 export interface RconLineEvent {
   serverId: string;
   kind: 'console' | 'chat' | 'response' | 'system';
