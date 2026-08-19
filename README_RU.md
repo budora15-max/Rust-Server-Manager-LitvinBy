@@ -1,3 +1,11 @@
+---
+ℹ️ **Ищете английскую версию?** Документация на английском языке доступна здесь: [README.md](README.md).
+---
+
+# Rust Server Manager LitvinBY
+... (далее идет ваш оригинальный текст на русском языке)
+
+
 <img width="1872" height="1017" alt="rsm" src="https://github.com/user-attachments/assets/18b3b41d-b117-4e18-8e1a-978f28f6dd5a" />
 # Rust Server Manager LitvinBY
 
