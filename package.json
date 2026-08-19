@@ -1,7 +1,7 @@
 {
   "name": "rust-server-manager-clone",
   "private": true,
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Desktop application for managing Rust game servers (Rust Server Manager clone)",
   "author": "RSM Team",
   "license": "MIT",
