@@ -295,7 +295,6 @@ export function startServer(server: ServerPayload): Promise<ServerStartResult> {
   if (processes.has(server.id)) {
     return Promise.resolve({ success: false, mode: 'real', error: 'Process is already running.' });
   }
-  // сервер мог пережить прошлую сессию менеджера — второй процесс не нужен
   const externalPid = externalPids.get(server.id);
   if (externalPid) {
     try {
@@ -309,7 +308,7 @@ export function startServer(server: ServerPayload): Promise<ServerStartResult> {
   try {
     sanitizeServerConfig(server);
   } catch {
-    // если починить не вышло — сервер и так стартует
+    // если починка не вышла — сервер и так стартует
   }
 
   const args = [

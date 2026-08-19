@@ -17,7 +17,6 @@ export interface ModsStatusResult {
   oxide: ModStatus;
 }
 
-// официальный источник Oxide: zip с umod.org, версия — из games/rust.json
 const OXIDE_ZIP_URL = 'https://umod.org/games/rust/download';
 const OXIDE_META_URL = 'https://umod.org/games/rust.json';
 
@@ -48,7 +47,6 @@ interface OxideRemoteInfo {
   branches?: Array<{ name: string; buildid: number; pwdrequired: number }>;
 }
 
-// ветки Steam (public/staging/debug и т.д.) с buildid — тянем из games/rust.json с кэшем
 async function remoteOxideInfo(): Promise<OxideRemoteInfo | null> {
   const cached = oxideInfoCache.get('rust');
   if (cached && Date.now() - cached.at < OXIDE_INFO_TTL_MS) return cached.data;

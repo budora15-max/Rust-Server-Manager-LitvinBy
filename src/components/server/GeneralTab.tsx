@@ -343,7 +343,7 @@ export function GeneralTab({ server, onSave }: GeneralTabProps) {
   const toggleTag = (tag: string) => {
     setForm((prev) => {
       if (prev.tags.includes(tag)) return { ...prev, tags: prev.tags.filter((x) => x !== tag) };
-      if (prev.tags.length >= 3) return prev; // максимум 3 тега
+      if (prev.tags.length >= 3) return prev;
       return { ...prev, tags: [...prev.tags, tag] };
     });
     setSaved(false);

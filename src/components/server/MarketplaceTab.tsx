@@ -110,7 +110,7 @@ export function MarketplaceTab({ server }: { server: RustServer }) {
     if (!bridge) return;
     try {
       const res = await bridge.pluginsPickDir();
-      if (!res.ok) return; // отмена или ошибка
+      if (!res.ok) return;
       setDisk({ dir: res.dir ?? '', files: res.files ?? [] });
     } catch {
       pushNotice('err', t('marketplace.installError'));

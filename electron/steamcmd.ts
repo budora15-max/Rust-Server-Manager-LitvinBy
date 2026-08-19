@@ -115,7 +115,6 @@ function extractArchive(archivePath: string, dest: string): Promise<void> {
   });
 }
 
-// при первом запуске качаем steamcmd, дальше он лежит в userData
 async function ensureSteamCmd(emit: UpdateEmitter): Promise<string> {
   const exe = steamcmdExe();
   if (fs.existsSync(exe)) return exe;

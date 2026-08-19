@@ -149,7 +149,6 @@ function showTrayHintOnce(): void {
     if (fs.existsSync(hintFile)) return;
     fs.writeFileSync(hintFile, new Date().toISOString());
   } catch {
-    return; // не критично — просто пропускаем подсказку
   }
   try {
     new Notification({
@@ -162,8 +161,6 @@ function showTrayHintOnce(): void {
 
 const PLUGIN_UPDATE_CHECK_MS = 60 * 60_000;
 
-// раз в час проверяем обновления плагинов на всех серверах. Шлём уведомление
-// только при приросте числа обновлений, чтобы не спамить каждым тиком.
 let pluginCheckRunning = false;
 const pluginUpdateCounts = new Map<string, number>();
 
@@ -197,7 +194,7 @@ function startPluginUpdateWatcher(): void {
               broadcast('plugins:updates', { serverId: s.id, count: available });
             }
           } catch {
-            // uMod недоступен или с плагинами беда — сервер пропускаем
+            // uMod недоступен — пропускаем сервер
           }
         })
       );
@@ -235,7 +232,6 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', () => {
   quitting = true;
-  // по дефолту серверы не глушим — пусть живут, на след. старте подхватим их
   if (settings.stopServersOnExit) stopAll();
   taskScheduler.stop();
   metricsCollector.stopAll();
@@ -246,7 +242,6 @@ const rconManager = new RconManager();
 
 let cachedServers: ServerPayload[] = [];
 
-// шлём команду в RCON, при необходимости поднимаем коннект
 async function ensureRconSend(server: ServerPayload, command: string): Promise<boolean> {
   if (rconManager.isConnected(server.id)) return rconManager.send(server.id, command).ok;
   try {

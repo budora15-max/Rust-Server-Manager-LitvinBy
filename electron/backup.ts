@@ -2,7 +2,6 @@ import * as fs from 'fs';
 import * as path from 'path';
 import type { ServerPayload } from './types';
 
-// тащим только мир и базы, скриншоты/прочее в бэкап не пишем
 const WORLD_FILE_RE = /\.(sav|map|db|db-wal|db-shm|db\.\d+)$/i;
 
 export interface BackupEntry {

@@ -8,7 +8,6 @@ function identityDir(server: ServerPayload): string | null {
   return path.join(server.installPath, 'server', server.identity);
 }
 
-// хедер плагина в начале .cs — оттуда тянем имя/автора/версию/ResourceId
 const INFO_RE =
   /\[Info\("(?<name>[^"]+)",\s*"(?<author>[^"]+)",\s*"(?<version>[^"]+)"(?<rest>[^\]]*)\]/;
 const RESOURCE_ID_RE = /ResourceId\s*=\s*(\d+)/i;
