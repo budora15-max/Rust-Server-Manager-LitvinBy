@@ -1,13 +1,15 @@
 # Архитектура
 
-## Главное
+Заметки для тех, кто полезет в код. Не претендуют на полноту — просто карта местности.
 
-Electron-приложение, два процесса:
+## Два процесса
+
+Electron-приложение, всё стандартно:
 
 - `electron/` — main: процессы Rust, файлы, планировщик, RCON, трей, уведомления.
-- `src/` — renderer: React + Vite, только UI.
+- `src/` — renderer: React + Vite, чистый UI.
 
-Renderer отрезан от Node, всё общение идёт через `preload.ts` (`window.rustManager`). Типы моста — в `src/vite-env.d.ts`.
+Рендерер от Node отрезан, всё общение идёт через `preload.ts` (глобал `window.rustManager`). Типы моста — в `src/vite-env.d.ts`, а типы данных дублируются в `electron/types.ts` и `src/types/index.ts`, потому что у бэкенда и рендерера разные tsconfig. Да, это дубль — так и живём.
 
 ## Что где лежит
 
@@ -20,7 +22,7 @@ Renderer отрезан от Node, всё общение идёт через `pr
 - `plugins.ts`, `mods.ts`, `marketplace.ts` — Oxide: установка фреймворка из zip, сканирование плагинов, отключение через `.disabled`, каталог uMod.
 - `config.ts` — парсер `server.cfg`: читает/пишет, значения с пробелами заворачивает в кавычки.
 - `ports.ts` — занятость портов (netstat/tasklist/ss), firewall Windows (UAC), TCP-пробы наружу.
-- `notifications.ts`, `telegram.ts`, `discord.ts` — алерты: системные пуши + вебхуки.
+- `notifications.ts`, `alerts.ts` — алерты: системные пуши + вебхуки Telegram и Discord.
 - `locale.ts` — локализация main (трей, уведомления).
 
 ## IPC
@@ -49,4 +51,5 @@ Renderer отрезан от Node, всё общение идёт через `pr
 ## Тесты
 
 `tests/` на `node:test`, без Jest/Vitest. Тестируем только чистые модули (config, ports, scheduler, backups), не зависящие от Electron. Запуск: `npm test` (сам компилит бэкенд в `dist-electron`).
+
 
