@@ -1,5 +1,5 @@
 <img width="1872" height="1017" alt="rsm" src="https://github.com/user-attachments/assets/18b3b41d-b117-4e18-8e1a-978f28f6dd5a" />
-# Rust Server Manager Clone
+# Rust Server Manager LitvinBY
 
 Десктопная утилита под Windows для управления выделенными серверами Rust. Позволяет контролировать процессы, работать с RCON-консолью и настраивать моды в одном окне.
 
