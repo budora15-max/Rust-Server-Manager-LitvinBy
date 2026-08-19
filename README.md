@@ -3,10 +3,6 @@
 ---
 
 # Rust Server Manager LitvinBY
-... (далее идет весь английский текст, который мы перевели ранее)
-
-
-# Rust Server Manager LitvinBY
 
 A desktop utility for Windows and Linux designed to manage dedicated Rust servers. Monitor processes, RCON, mods, wipes, and backups — all within a single, streamlined window.
 
