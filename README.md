@@ -1,5 +1,5 @@
----
 ℹ️ **Looking for the Russian version?** You can read the documentation in Russian here: [README_RU.md](README_RU.md).
+
 ---
 
 # Rust Server Manager LitvinBY
@@ -35,7 +35,7 @@ A desktop utility for Windows and Linux designed to manage dedicated Rust server
 ### 📊 Monitoring & Notifications
 * **Real-Time Metrics:** Tracks active players, server FPS, CPU load, and RAM usage.
 * **Historical Analytics:** View player count and performance history charts filtered by day, week, or month.
-* **Log Viewer:** Browse comprehensive server logs with built-in search and category filters.
+* **Log Viewer:** Browse comprehensive server logs with built-ins search and category filters.
 * **Instant Alerts:** Supports Windows native push notifications + Discord and Telegram webhook alerts.
 
 ### 🌐 Infrastructure & Networking
