@@ -440,6 +440,10 @@
     "disable": "Disable",
     "config": "Config",
     "configTitle": "Config of \"{{name}}\"",
+    "jsonValid": "Valid JSON",
+    "jsonInvalid": "Invalid JSON",
+    "jsonEmpty": "Config is empty",
+    "formatJson": "Format",
     "configSaved": "Config saved to {{path}}",
     "saveConfig": "Save config",
     "cancel": "Cancel"

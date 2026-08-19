@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, FileCode2, FileJson, Plug, Power, RefreshCw, ScanLine, Trash2, Upload } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, FileCode2, FileJson, Plug, Power, RefreshCw, ScanLine, Trash2, Upload, Wand2 } from 'lucide-react';
 import type { PluginInfo, PluginUpdateStatus, PluginsListResult, RustServer } from '@/types';
 import { Button } from '@/components/Button';
 import { ConfirmModal } from '@/components/ConfirmModal';
@@ -24,6 +24,21 @@ function daysSince(iso?: string): number {
   if (!iso) return 0;
   const ms = Date.now() - new Date(iso).getTime();
   return Math.max(0, Math.floor(ms / 86_400_000));
+}
+
+interface JsonCheck {
+  ok: boolean;
+  error?: string;
+}
+
+function checkJson(text: string): JsonCheck {
+  if (!text.trim()) return { ok: false };
+  try {
+    JSON.parse(text);
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
 }
 
 interface Notice {
@@ -69,6 +84,8 @@ export function PluginsTab({ server }: { server: RustServer }) {
   const [configText, setConfigText] = useState('');
   const [configPath, setConfigPath] = useState('');
   const [configError, setConfigError] = useState('');
+  const [configValid, setConfigValid] = useState(true);
+  const [jsonError, setJsonError] = useState('');
   const [configSaving, setConfigSaving] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
 
@@ -180,6 +197,8 @@ export function PluginsTab({ server }: { server: RustServer }) {
     setConfigError('');
     setConfigPath('');
     setConfigPlugin(plugin);
+    setConfigValid(true);
+    setJsonError('');
     try {
       const res = await bridge.pluginsReadConfig(server, plugin.name);
       if (res.ok) {
@@ -197,6 +216,12 @@ export function PluginsTab({ server }: { server: RustServer }) {
 
   const saveConfig = async () => {
     if (!configPlugin || !bridge) return;
+    const check = checkJson(configText);
+    if (!check.ok) {
+      setConfigValid(false);
+      setJsonError(check.error ?? '');
+      return;
+    }
     setConfigSaving(true);
     setConfigError('');
     try {
@@ -213,6 +238,12 @@ export function PluginsTab({ server }: { server: RustServer }) {
     } finally {
       setConfigSaving(false);
     }
+  };
+
+  const handleFormat = () => {
+    const check = checkJson(configText);
+    if (!check.ok) return;
+    setConfigText(JSON.stringify(JSON.parse(configText), null, 2));
   };
 
   const handleUpdate = async (plugin: PluginInfo) => {
@@ -458,17 +489,46 @@ export function PluginsTab({ server }: { server: RustServer }) {
                 {configError}
               </p>
             )}
+            <div className="mt-3 flex items-center justify-between gap-2">
+              {configValid ? (
+                <span className="flex items-center gap-1.5 text-xs text-emerald-400">
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  {t('plugins.jsonValid')}
+                </span>
+              ) : (
+                <span className="flex items-start gap-1.5 text-xs text-red-400">
+                  <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  <span>
+                    {t('plugins.jsonInvalid')}: {jsonError || t('plugins.jsonEmpty')}
+                  </span>
+                </span>
+              )}
+              <Button size="sm" variant="secondary" onClick={handleFormat} disabled={!configValid}>
+                <Wand2 className="h-3.5 w-3.5" /> {t('plugins.formatJson')}
+              </Button>
+            </div>
             <textarea
               value={configText}
-              onChange={(e) => setConfigText(e.target.value)}
+              onChange={(e) => {
+                const text = e.target.value;
+                setConfigText(text);
+                const check = checkJson(text);
+                setConfigValid(check.ok);
+                setJsonError(check.ok ? '' : check.error ?? '');
+              }}
               spellCheck={false}
-              className="mt-3 h-80 w-full resize-none rounded-lg border border-[#2a2f3a] bg-[#0b0d11] p-3 font-mono text-xs text-textMain focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/25"
+              className={cn(
+                'mt-2 h-80 w-full resize-none rounded-lg border bg-[#0b0d11] p-3 font-mono text-xs text-textMain focus:outline-none focus:ring-2',
+                configValid
+                  ? 'border-[#2a2f3a] focus:border-accent focus:ring-accent/25'
+                  : 'border-red-500/60 focus:border-red-500 focus:ring-red-500/25'
+              )}
             />
             <div className="mt-4 flex justify-end gap-2">
               <Button variant="secondary" onClick={() => setConfigPlugin(null)} disabled={configSaving}>
                 {t('plugins.cancel')}
               </Button>
-              <Button onClick={() => void saveConfig()} loading={configSaving}>
+              <Button onClick={() => void saveConfig()} loading={configSaving} disabled={!configValid}>
                 {t('plugins.saveConfig')}
               </Button>
             </div>

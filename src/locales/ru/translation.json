@@ -440,6 +440,10 @@
     "disable": "Выключить",
     "config": "Конфиг",
     "configTitle": "Конфиг «{{name}}»",
+    "jsonValid": "JSON валиден",
+    "jsonInvalid": "Некорректный JSON",
+    "jsonEmpty": "Конфиг пуст",
+    "formatJson": "Форматировать",
     "configSaved": "Конфиг сохранён: {{path}}",
     "saveConfig": "Сохранить конфиг",
     "cancel": "Отмена"
