@@ -20,6 +20,12 @@ function formatBytes(bytes: number): string {
   return `${(bytes / 1024).toFixed(1)} KB`;
 }
 
+function daysSince(iso?: string): number {
+  if (!iso) return 0;
+  const ms = Date.now() - new Date(iso).getTime();
+  return Math.max(0, Math.floor(ms / 86_400_000));
+}
+
 interface Notice {
   type: 'ok' | 'err';
   text: string;
@@ -108,6 +114,7 @@ export function PluginsTab({ server }: { server: RustServer }) {
                 ...p,
                 latestVersion: u.latestVersion ?? undefined,
                 updateAvailable: u.updateAvailable,
+                latestReleaseAt: u.latestReleaseAt,
               };
             }
             const prevPlugin = prev.find((pp) => pp.id === p.id);
@@ -372,6 +379,11 @@ export function PluginsTab({ server }: { server: RustServer }) {
                         latest: plugin.latestVersion,
                       })}
                     </span>
+                  )}
+                  {plugin.updateAvailable && plugin.latestReleaseAt && (
+                    <p className="mt-1 text-[11px] text-textMuted">
+                      {t('plugins.releasedAgo', { days: daysSince(plugin.latestReleaseAt) })}
+                    </p>
                   )}
                 </div>
               </div>

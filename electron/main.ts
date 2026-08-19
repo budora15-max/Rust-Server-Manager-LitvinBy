@@ -156,6 +156,55 @@ function showTrayHintOnce(): void {
   }
 }
 
+const PLUGIN_UPDATE_CHECK_MS = 60 * 60_000;
+
+// раз в час проверяем обновления плагинов на всех серверах. Шлём уведомление
+// только при приросте числа обновлений, чтобы не спамить каждым тиком.
+let pluginCheckRunning = false;
+const pluginUpdateCounts = new Map<string, number>();
+
+function startPluginUpdateWatcher(): void {
+  const run = async (): Promise<void> => {
+    if (pluginCheckRunning) return;
+    pluginCheckRunning = true;
+    try {
+      const targets = cachedServers.filter((s) => s.installPath);
+      await Promise.all(
+        targets.map(async (s) => {
+          try {
+            const updates = await checkPluginUpdates(s);
+            const available = updates.filter((u) => u.updateAvailable).length;
+            const prev = pluginUpdateCounts.get(s.id) ?? 0;
+            pluginUpdateCounts.set(s.id, available);
+            if (available > prev) {
+              const ru = getLocale() === 'ru';
+              pushNotification({
+                id: `plugins-update-${s.id}-${Date.now()}`,
+                at: Date.now(),
+                serverId: s.id,
+                serverName: s.name,
+                kind: 'plugins-update',
+                title: ru ? 'Доступны обновления плагинов' : 'Plugin updates available',
+                body: ru
+                  ? `${available} плагинов на сервере «${s.name}»`
+                  : `${available} plugins on "${s.name}"`,
+                read: false,
+              });
+              broadcast('plugins:updates', { serverId: s.id, count: available });
+            }
+          } catch {
+            // uMod недоступен или с плагинами беда — сервер пропускаем
+          }
+        })
+      );
+    } finally {
+      pluginCheckRunning = false;
+    }
+  };
+  setInterval(() => void run(), PLUGIN_UPDATE_CHECK_MS);
+  setTimeout(() => void run(), 30_000);
+}
+
 app.whenReady().then(() => {
   loadSettings();
   app.setAppUserModelId('com.rustservermanager.app');
@@ -169,6 +218,7 @@ app.whenReady().then(() => {
   registerIpc();
   createTray();
   createWindow();
+  startPluginUpdateWatcher();
 
   app.on('activate', () => {
     showWindow();

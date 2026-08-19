@@ -9,6 +9,7 @@ export interface ModStatus {
   remoteVersion?: string;
   localVersion?: string;
   pluginCount?: number;
+  branches?: Array<{ name: string; buildid: number; pwdrequired: number }>;
   error?: string;
 }
 
@@ -39,14 +40,34 @@ function countPlugins(dir: string): number {
   }
 }
 
-async function remoteOxideVersion(): Promise<string | undefined> {
+const oxideInfoCache = new Map<string, { at: number; data: OxideRemoteInfo | null }>();
+const OXIDE_INFO_TTL_MS = 30 * 60_000;
+
+interface OxideRemoteInfo {
+  version?: string;
+  branches?: Array<{ name: string; buildid: number; pwdrequired: number }>;
+}
+
+// ветки Steam (public/staging/debug и т.д.) с buildid — тянем из games/rust.json с кэшем
+async function remoteOxideInfo(): Promise<OxideRemoteInfo | null> {
+  const cached = oxideInfoCache.get('rust');
+  if (cached && Date.now() - cached.at < OXIDE_INFO_TTL_MS) return cached.data;
+
   try {
     const res = await httpGet(OXIDE_META_URL);
-    if (res.status !== 200) return undefined;
-    const j = JSON.parse(res.body.toString('utf8')) as { latest_release_version_formatted?: string };
-    return j.latest_release_version_formatted || undefined;
+    if (res.status !== 200) return null;
+    const j = JSON.parse(res.body.toString('utf8')) as {
+      latest_release_version_formatted?: string;
+      steam_branches?: Array<{ name: string; buildid: number; pwdrequired: number }>;
+    };
+    const data: OxideRemoteInfo = {
+      version: j.latest_release_version_formatted || undefined,
+      branches: Array.isArray(j.steam_branches) ? j.steam_branches : undefined,
+    };
+    oxideInfoCache.set('rust', { at: Date.now(), data });
+    return data;
   } catch {
-    return undefined;
+    return null;
   }
 }
 
@@ -116,15 +137,16 @@ export async function removeMod(
 }
 
 export async function getModsStatus(server: ServerPayload): Promise<ModsStatusResult> {
-  const oxideRemote = await remoteOxideVersion();
+  const remote = await remoteOxideInfo();
   const oxideInstalled =
     !!server.installPath && fs.existsSync(path.join(managedDir(server), 'Oxide.Core.dll'));
   return {
     oxide: {
       installed: oxideInstalled,
-      remoteVersion: oxideRemote,
+      remoteVersion: remote?.version,
       localVersion: oxideInstalled ? localOxideVersion(server) : undefined,
       pluginCount: countPlugins(path.join(oxideDir(server), 'plugins')),
+      branches: remote?.branches,
     },
   };
 }

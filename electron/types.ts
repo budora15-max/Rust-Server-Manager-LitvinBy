@@ -83,12 +83,14 @@ export interface PluginInfo {
   resourceId?: number;
   latestVersion?: string;
   updateAvailable?: boolean;
+  latestReleaseAt?: string;
 }
 
 export interface PluginUpdateStatus {
   plugin: PluginInfo;
   latestVersion: string | null;
   updateAvailable: boolean;
+  latestReleaseAt?: string;
   error?: string;
 }
 

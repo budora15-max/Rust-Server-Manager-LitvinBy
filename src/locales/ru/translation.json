@@ -434,6 +434,7 @@
     "browserDemo": "Браузерное демо: реальное сканирование требует Electron-приложение. Показан пример списка.",
     "versionBy": "v{{version}} от {{author}}",
     "updateAvailable": "Обновление: v{{current}} → v{{latest}}",
+    "releasedAgo": "вышла {{days}} дн. назад",
     "oxide": "Oxide",
     "enable": "Включить",
     "disable": "Выключить",
@@ -791,6 +792,7 @@
     "installedVersion": "Установлен",
     "latestVersion": "Актуальная",
     "plugins": "Плагинов",
+    "branches": "Ветки Steam",
     "removeTitle": "Удалить {{mod}}?",
     "removeMessage": "Папка фреймворка (oxide/) и его файлы в RustDedicated_Data/Managed будут удалены. Сначала остановите сервер.",
     "removeConfirm": "Удалить"

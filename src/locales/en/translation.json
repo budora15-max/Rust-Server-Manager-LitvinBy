@@ -434,6 +434,7 @@
     "browserDemo": "Browser demo: real plugin scanning requires the Electron app. Sample list shown.",
     "versionBy": "v{{version}} by {{author}}",
     "updateAvailable": "Update: v{{current}} → v{{latest}}",
+    "releasedAgo": "released {{days}}d ago",
     "oxide": "Oxide",
     "enable": "Enable",
     "disable": "Disable",
@@ -791,6 +792,7 @@
     "installedVersion": "Installed",
     "latestVersion": "Latest",
     "plugins": "Plugins",
+    "branches": "Steam branches",
     "removeTitle": "Remove {{mod}}?",
     "removeMessage": "The framework folder (oxide/) and its files in RustDedicated_Data/Managed will be deleted. Stop the server first.",
     "removeConfirm": "Remove"

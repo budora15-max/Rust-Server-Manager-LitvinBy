@@ -223,6 +223,23 @@ export function ModsTab({ server }: ModsTabProps) {
               </div>
             </div>
 
+            {status?.branches && status.branches.length > 0 && (
+              <div className="mt-3">
+                <p className="text-xs text-textMuted">{t('mods.branches')}</p>
+                <div className="mt-1 flex flex-wrap gap-1.5">
+                  {status.branches.map((b) => (
+                    <span
+                      key={b.name}
+                      className="inline-flex items-center gap-1 rounded-full border border-[#2a2f3a] bg-[#1a1e26] px-2 py-0.5 text-[11px] text-textMuted"
+                    >
+                      {b.name}
+                      <span className="font-mono text-textMain/80">#{b.buildid}</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="mt-4 flex items-center gap-2">
               <Button
                 loading={busy}

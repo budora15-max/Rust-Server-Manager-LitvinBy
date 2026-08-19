@@ -120,6 +120,7 @@ export function listPlugins(server: ServerPayload): PluginsListResult {
 interface UmodMeta {
   latestVersion: string;
   downloadUrl: string;
+  latestReleaseAt?: string;
 }
 
 const UMOD_CACHE_TTL_MS = 30 * 60_000;
@@ -155,13 +156,18 @@ export async function getLatestPluginInfo(name: string): Promise<UmodMeta | null
       if (res.status === 200) {
         const meta = JSON.parse(res.body.toString('utf8')) as {
           latest_release_version?: string;
+          latest_release_at_atom?: string;
           download_url?: string;
           url?: string;
         };
         const latestVersion = meta.latest_release_version;
         const downloadUrl = meta.download_url ?? (meta.url ? `${meta.url}.cs` : null);
         if (latestVersion && downloadUrl) {
-          const info: UmodMeta = { latestVersion, downloadUrl };
+          const info: UmodMeta = {
+            latestVersion,
+            downloadUrl,
+            latestReleaseAt: meta.latest_release_at_atom || undefined,
+          };
           umodCache.set(name, { info, at: Date.now() });
           return info;
         }
@@ -193,6 +199,7 @@ export async function checkPluginUpdates(
           plugin,
           latestVersion: info.latestVersion,
           updateAvailable: compareVersions(info.latestVersion, plugin.version) > 0,
+          latestReleaseAt: info.latestReleaseAt,
         };
       } catch (err) {
         return {

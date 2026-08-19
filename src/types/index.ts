@@ -69,6 +69,7 @@ export interface PluginInfo {
   resourceId?: number;
   latestVersion?: string;
   updateAvailable?: boolean;
+  latestReleaseAt?: string;
 }
 
 export interface ScheduledWipe {
@@ -186,6 +187,7 @@ export interface PluginUpdateStatus {
   plugin: PluginInfo;
   latestVersion: string | null;
   updateAvailable: boolean;
+  latestReleaseAt?: string;
   error?: string;
 }
 
@@ -262,6 +264,7 @@ export interface ModStatus {
   remoteVersion?: string;
   localVersion?: string;
   pluginCount?: number;
+  branches?: Array<{ name: string; buildid: number; pwdrequired: number }>;
   error?: string;
 }
 
