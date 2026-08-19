@@ -108,7 +108,6 @@ export function DiscordTab({ server }: DiscordTabProps) {
     }
   };
 
-
   return (
     <div className="max-w-3xl">
       {notice && (

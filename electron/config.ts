@@ -33,13 +33,11 @@ const DEFAULT_CONFIG: Record<string, string> = {
   'rcon.web': '1',
 };
 
-/** <installPath>/server/<identity>/cfg/server.cfg */
 function configPath(server: ServerPayload): string | null {
   if (!server.installPath) return null;
   return path.join(server.installPath, 'server', server.identity, 'cfg', 'server.cfg');
 }
 
-/** Значения Rust-конфига с пробелами должны быть в двойных кавычках. */
 function formatCfgValue(value: string): string {
   const v = value.trim();
   if (!v) return v;
@@ -48,16 +46,10 @@ function formatCfgValue(value: string): string {
   return v;
 }
 
-/** Строка конфига с корректным кавычками значения. */
 function formatCfgLine(key: string, value: string): string {
   return `${key} ${formatCfgValue(value)}`;
 }
 
-/**
- * Чинит существующий server.cfg: значения с пробелами (server.level "Procedural Map",
- * server.name, server.description) без кавычек ломают загрузку сцены Procedural
- * на некоторых сборках Rust. Возвращает true, если файл был изменён.
- */
 export function sanitizeServerConfig(server: ServerPayload): boolean {
   const cfgPath = configPath(server);
   if (!cfgPath || !fs.existsSync(cfgPath)) return false;
@@ -114,7 +106,6 @@ export function readServerConfig(server: ServerPayload): ServerConfigResult {
     };
   }
 
-  // Файла нет — создаём дефолтный
   if (!fs.existsSync(cfgPath)) {
     try {
       fs.mkdirSync(path.dirname(cfgPath), { recursive: true });
@@ -140,7 +131,6 @@ export function readServerConfig(server: ServerPayload): ServerConfigResult {
     }
   }
 
-  // Парсим существующий файл
   try {
     const raw = fs.readFileSync(cfgPath, 'utf8');
     const rawLines = raw.split(/\r?\n/);
@@ -162,10 +152,6 @@ export function readServerConfig(server: ServerPayload): ServerConfigResult {
   }
 }
 
-/**
- * Сохранение настроек: обновляет значения существующих ключей на месте
- * (сохраняя комментарии и структуру), новые ключи дописывает в конец.
- */
 export function saveServerConfig(
   server: ServerPayload,
   config: Record<string, string>
@@ -208,7 +194,6 @@ export function saveServerConfig(
       if (!seen.has(key)) out.push(formatCfgLine(key, value));
     }
 
-    // Склеиваем без тройных переносов и гарантируем финальный перевод строки
     const content = out.join('\n').replace(/\n{3,}/g, '\n\n').trimEnd() + '\n';
     fs.writeFileSync(cfgPath, content, 'utf8');
     return { ok: true, path: cfgPath };

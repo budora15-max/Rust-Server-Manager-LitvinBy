@@ -2,12 +2,6 @@ import * as net from 'net';
 import { exec } from 'child_process';
 import type { ServerPayload } from './types';
 
-/**
- * Порты сервера: локальный статус (свободен/занят — кем), правила Windows
- * Firewall (открытие/закрытие через netsh с выборочным UAC) и TCP-проверка
- * доступности host:port извне.
- */
-
 export type PortState = 'free' | 'used' | 'managed' | 'unknown';
 
 export interface PortStatus {
@@ -32,13 +26,11 @@ export interface ExternalProbeResult {
   error?: string;
 }
 
-/** Порт сервера: имя правила Firewall (уникальное на сервер + порт + протокол). */
 function ruleName(server: ServerPayload, port: number, protocol: string): string {
   const safe = (server.name || server.id).replace(/[^\wа-яА-ЯёЁ -]/gi, '').trim() || 'server';
   return `Rust Server Manager - ${safe} - ${port}/${protocol}`;
 }
 
-/** Список портов Rust-сервера (игровой UDP, query UDP, WebRcon TCP). */
 export function serverPorts(server: ServerPayload): Array<{
   key: string;
   label: string;
@@ -61,7 +53,6 @@ function execCapture(cmd: string): Promise<string> {
   });
 }
 
-/** Парсинг вывода netstat: порт → протокол/PID/слушает ли. */
 export function parseNetstatText(text: string): Map<string, { proto: string; pid: number; listening: boolean }> {
   const map = new Map<string, { proto: string; pid: number; listening: boolean }>();
   for (const line of text.split(/\r?\n/)) {
@@ -79,11 +70,6 @@ export function parseNetstatText(text: string): Map<string, { proto: string; pid
   return map;
 }
 
-/**
- * Парсинг вывода `netstat -tunlp` (Linux). PID виден только при запуске от root;
- * без прав PID не определяется (порт считается свободным).
- * Формат: `udp 0 0 0.0.0.0:28015 0.0.0.0:* 1234/RustDedicated` (у tcp между ними — State).
- */
 export function parseNetstatLinuxText(text: string): Map<string, { proto: string; pid: number; listening: boolean }> {
   const map = new Map<string, { proto: string; pid: number; listening: boolean }>();
   for (const line of text.split(/\r?\n/)) {
@@ -102,7 +88,6 @@ export function parseNetstatLinuxText(text: string): Map<string, { proto: string
   return map;
 }
 
-/** Парсинг вывода tasklist /fo csv /nh: PID → имя процесса. */
 export function parseTasklistText(text: string): Map<number, string> {
   const map = new Map<number, string>();
   for (const line of text.split(/\r?\n/)) {
@@ -114,7 +99,6 @@ export function parseTasklistText(text: string): Map<number, string> {
 
 async function netstatMap(): Promise<Map<string, { proto: string; pid: number; listening: boolean }>> {
   if (process.platform !== 'win32') {
-    // Linux: netstat -tunlp (или ss -tulpn как запасной).
     const out = await execCapture('netstat -tunlp 2>/dev/null || ss -tulpn');
     return parseNetstatLinuxText(out);
   }
@@ -127,7 +111,6 @@ async function netstatMap(): Promise<Map<string, { proto: string; pid: number; l
 
 async function tasklistMap(): Promise<Map<number, string>> {
   if (process.platform !== 'win32') {
-    // Linux: ps — PID → имя процесса.
     const out = await execCapture('ps -eo pid=,comm=');
     const map = new Map<number, string>();
     for (const line of out.split(/\r?\n/)) {
@@ -139,7 +122,6 @@ async function tasklistMap(): Promise<Map<number, string>> {
   return parseTasklistText(await execCapture('tasklist /fo csv /nh'));
 }
 
-/** Локальный статус портов сервера. managedPid — PID сервера, запущенного менеджером. */
 export async function checkLocalPorts(server: ServerPayload, managedPid?: number): Promise<PortStatus[]> {
   const [netstat, tasks] = await Promise.all([netstatMap(), tasklistMap()]);
   return serverPorts(server).map((def) => {
@@ -162,7 +144,6 @@ export async function checkLocalPorts(server: ServerPayload, managedPid?: number
   });
 }
 
-/** Статус правила Windows Firewall для порта (без прав администратора). */
 export async function getFirewallRule(
   server: ServerPayload,
   port: number,
@@ -188,14 +169,12 @@ export async function getFirewallRule(
   }
 }
 
-/** Выполнение команды с правами администратора (выборочный UAC-промпт). */
 async function runElevated(cmd: string): Promise<string> {
   const encoded = Buffer.from(cmd, 'utf16le').toString('base64');
   const outer = `powershell -NoProfile -NonInteractive -Command "Start-Process powershell -Verb RunAs -Wait -ArgumentList '-NoProfile','-EncodedCommand','${encoded}'"`;
   return execCapture(outer);
 }
 
-/** Открытие порта в Windows Firewall (UAC-промпт при необходимости). */
 export async function openFirewallPort(
   server: ServerPayload,
   port: number,
@@ -214,7 +193,6 @@ export async function openFirewallPort(
   return getFirewallRule(server, port, protocol);
 }
 
-/** Закрытие порта в Windows Firewall (удаление правила, UAC-промпт). */
 export async function closeFirewallPort(
   server: ServerPayload,
   port: number,
@@ -233,7 +211,6 @@ export async function closeFirewallPort(
   return getFirewallRule(server, port, protocol);
 }
 
-/** TCP-проверка доступности host:port извне (таймаут 3 сек). */
 export function probeExternal(host: string, port: number): Promise<ExternalProbeResult> {
   return new Promise((resolve) => {
     if (!host) {

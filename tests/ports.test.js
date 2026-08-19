@@ -1,4 +1,3 @@
-// Тесты модуля портов (формирование списка + парсинг netstat/tasklist).
 const { test } = require('node:test');
 const assert = require('node:assert');
 const { serverPorts, parseNetstatText, parseNetstatLinuxText, parseTasklistText } = require('../dist-electron/ports.js');

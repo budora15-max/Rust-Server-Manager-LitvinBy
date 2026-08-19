@@ -11,19 +11,12 @@ const execFileAsync = promisify(execFile) as (
   options: { timeout: number }
 ) => Promise<{ stdout: string; stderr: string }>;
 
-/**
- * Возможные имена исполняемого файла Rust-сервера.
- * Зависит от способа установки/хостера: официальный SteamCMD-клиент даёт
- * RustDedicatedServer.exe, ряд сборок и панелей — RustDedicated.exe.
- */
-/** Имена исполняемого файла Rust-сервера: на Windows — .exe, на Linux — нативный бинарник. */
 const EXE_NAMES =
   process.platform === 'win32'
     ? ['RustDedicatedServer.exe', 'RustDedicated.exe']
     : ['RustDedicated', 'RustDedicatedServer'];
 const EXE_LABEL = EXE_NAMES.join(' / ');
 
-/** Разбор дополнительных аргументов запуска с учётом кавычек. */
 function splitArgs(input: string): string[] {
   const tokens: string[] = [];
   const re = /"([^"]*)"|'([^']*)'|(\S+)/g;
@@ -36,32 +29,25 @@ function splitArgs(input: string): string[] {
   return tokens;
 }
 
-/** Завершение процесса вместе с дочерними (Windows: taskkill /T; Linux/macOS: процесс-группа). */
 function killProcessTree(pid: number): void {
+  // win — taskkill по дереву, unix — минус pid = вся группа
   try {
     if (process.platform === 'win32') {
       spawn('taskkill', ['/pid', String(pid), '/t', '/f'], { windowsHide: true });
       return;
     }
-    // Linux/macOS: сервер запускается с detached: true (отдельная группа), -pid = группа.
     try {
       process.kill(-pid, 'SIGTERM');
     } catch {
       process.kill(pid, 'SIGTERM');
     }
   } catch {
-    // процесс уже завершился или нет прав
   }
 }
 
 const processes = new Map<string, ChildProcess>();
 
-/** PID сервера, запущенного вне менеджера (обнаружен через список процессов ОС). */
 const externalPids = new Map<string, number>();
-
-// ---------------------------------------------------------------------------
-// Watchdog: автоконтроль падений и зависаний запущенных серверов.
-// ---------------------------------------------------------------------------
 
 const RESTART_WINDOW_MS = 30 * 60_000;
 const HANG_CHECK_MS = 30_000;
@@ -71,7 +57,6 @@ const RESTART_DELAY_MS = 5_000;
 
 interface WatchdogState {
   lastLogAt: number;
-  /** Менеджер убил процесс из-за зависания — чтобы не планировать второй рестарт из exit-обработчика. */
   hangKilled: boolean;
   restartCount: number;
   restartWindowStart: number;
@@ -129,7 +114,6 @@ export interface AutoRestartInfo {
 type AutoRestartHandler = (info: AutoRestartInfo) => void;
 let onAutoRestartHandler: AutoRestartHandler | null = null;
 
-/** Регистрация обработчика авторестарта (менеджер перезапускает сервер сам). */
 export function setOnAutoRestart(handler: AutoRestartHandler): void {
   onAutoRestartHandler = handler;
 }
@@ -142,12 +126,10 @@ export interface ServerRunningInfo {
 type ServerRunningHandler = (info: ServerRunningInfo) => void;
 let onServerRunningHandler: ServerRunningHandler | null = null;
 
-/** Регистрация обработчика факта запуска процесса (в т.ч. авторестарта). */
 export function setOnServerRunning(handler: ServerRunningHandler): void {
   onServerRunningHandler = handler;
 }
 
-/** Планирование авторестарта (crash — падение процесса, hang — зависание). */
 function scheduleAutoRestart(server: ServerPayload, reason: 'crash' | 'hang'): void {
   const cfg = watchdogSettingsFor(server);
   if (reason === 'crash' && !cfg.autoRestartOnCrash) return;
@@ -165,7 +147,6 @@ function scheduleAutoRestart(server: ServerPayload, reason: 'crash' | 'hang'): v
   clearRestartTimer(server.id);
   st.restartTimer = setTimeout(() => {
     st.restartTimer = null;
-    // Процесс мог быть запущен вручную, пока ждали — не перезапускаем повторно.
     if (processes.has(server.id)) return;
     void startServer(server);
   }, RESTART_DELAY_MS);
@@ -173,7 +154,6 @@ function scheduleAutoRestart(server: ServerPayload, reason: 'crash' | 'hang'): v
 
 let hangTimer: NodeJS.Timeout | null = null;
 
-/** Таймер проверки «зависаний» (нет вывода процесса дольше заданного времени). */
 function ensureHangTimer(): void {
   if (hangTimer) return;
   hangTimer = setInterval(() => {
@@ -205,12 +185,10 @@ type ProcessExitHandler = (info: ProcessExitInfo) => void;
 
 let onProcessExitHandler: ProcessExitHandler | null = null;
 
-/** Регистрация обработчика неожиданного завершения процесса (краш). */
 export function setOnProcessExit(handler: ProcessExitHandler): void {
   onProcessExitHandler = handler;
 }
 
-/** Строка лога запущенного сервера (stdout/stderr процесса). */
 export interface ServerLogLine {
   serverId: string;
   stream: 'stdout' | 'stderr';
@@ -221,23 +199,19 @@ type ServerLogHandler = (line: ServerLogLine) => void;
 
 let onServerLogHandler: ServerLogHandler | null = null;
 
-/** Регистрация обработчика потока лога запущенного сервера. */
 export function setOnServerLog(handler: ServerLogHandler): void {
   onServerLogHandler = handler;
 }
 
-/** Очистка ANSI-кодов (цвета Unity-лога) и переводов каретки. */
 function normalizeLogText(text: string): string {
   return text.replace(/\x1b\[[0-9;]*m/g, '').replace(/\r/g, '');
 }
 
-/** Путь к файлу, куда сохраняется лог запущенного сервера (постоянный лог). */
 function logFilePath(server: ServerPayload): string {
   if (!server.installPath) return '';
   return path.join(server.installPath, 'Logs', `server-${server.identity || server.id}.log`);
 }
 
-/** Дописывает строку лога процесса в постоянный файл Logs/server-<identity>.log. */
 function appendToLogFile(serverId: string, line: string): void {
   const server = processMeta.get(serverId)?.server;
   if (!server) return;
@@ -246,11 +220,9 @@ function appendToLogFile(serverId: string, line: string): void {
   try {
     fs.appendFileSync(file, `${new Date().toLocaleString('en-GB')} ${line}\n`);
   } catch {
-    // файл лога недоступен — не мешаем работе сервера
   }
 }
 
-/** Заголовок при каждом запуске сервера менеджером. */
 function writeLogHeader(server: ServerPayload): void {
   const file = logFilePath(server);
   if (!file) return;
@@ -261,15 +233,9 @@ function writeLogHeader(server: ServerPayload): void {
       `\n${'='.repeat(60)}\n[Manager] Server start requested at ${new Date().toLocaleString('en-GB')}\n${'='.repeat(60)}\n`
     );
   } catch {
-    // файл лога недоступен
   }
 }
 
-/**
- * Перехватывает stdout/stderr процесса сервера и транслирует их построчно
- * в обработчик — дальше строки попадают в консоль приложения (вкладка Console)
- * и сохраняются в файл Logs/server-<identity>.log.
- */
 function forwardProcessLog(child: ChildProcess, serverId: string): void {
   const attach = (stream: 'stdout' | 'stderr') => {
     const source = stream === 'stdout' ? child.stdout : child.stderr;
@@ -297,7 +263,6 @@ function forwardProcessLog(child: ChildProcess, serverId: string): void {
   attach('stderr');
 }
 
-/** Метаданные запущенных процессов (для детекции краша). */
 const processMeta = new Map<string, { server: ServerPayload; intentionallyStopped: boolean }>();
 
 export interface ExecutableInfo {
@@ -306,7 +271,6 @@ export interface ExecutableInfo {
   searched: string[];
 }
 
-/** Подробности поиска исполняемого файла сервера в папке установки. */
 export function findExecutableInfo(installPath: string): ExecutableInfo {
   const searched = EXE_NAMES.map((name) => path.join(installPath || '', name));
   for (const exe of searched) {
@@ -315,7 +279,6 @@ export function findExecutableInfo(installPath: string): ExecutableInfo {
   return { found: false, searched };
 }
 
-/** Возвращает путь к исполняемому файлу сервера (по любому известному имени) или null. */
 export function findExecutable(installPath: string): string | null {
   return findExecutableInfo(installPath).exePath ?? null;
 }
@@ -332,8 +295,7 @@ export function startServer(server: ServerPayload): Promise<ServerStartResult> {
   if (processes.has(server.id)) {
     return Promise.resolve({ success: false, mode: 'real', error: 'Process is already running.' });
   }
-  // Сервер мог быть запущен вне менеджера (или в прошлой сессии менеджера и
-  // остаться работать после его закрытия) — не запускаем второй экземпляр.
+  // сервер мог пережить прошлую сессию менеджера — второй процесс не нужен
   const externalPid = externalPids.get(server.id);
   if (externalPid) {
     try {
@@ -344,20 +306,13 @@ export function startServer(server: ServerPayload): Promise<ServerStartResult> {
     }
   }
 
-  // Чиним cfg перед стартом: значения с пробелами (server.level и др.) без кавычек
-  // ломают загрузку сцены Procedural на ряде сборок Rust.
   try {
     sanitizeServerConfig(server);
   } catch {
-    // не критично — сервер стартует, починка повторится при следующем запуске
   }
 
   const args = [
     '-batchmode',
-    // ВАЖНО: без '-nographics'. На сборках Rust, установленных на этой машине,
-    // флаг -nographics ломает загрузку сцены Procedural ("Failed to load level:
-    // Procedural", карта не генерируется, сервер зависает на 0 сущностей).
-    // Проверено: без флага карта генерируется штатно на обеих установках.
     '+server.identity',
     server.identity,
     '+server.seed',
@@ -374,40 +329,27 @@ export function startServer(server: ServerPayload): Promise<ServerStartResult> {
     String(server.rconPort || server.port + 2),
     '+rcon.web',
     '1',
-    // Конвар gamemode ('', softcore, hardcore, ...) — дублируется и в server.cfg.
-    // Пустое значение не передаём: игра сама прочитает server.cfg с `gamemode ""`.
     ...(server.gamemode ? ['+gamemode', server.gamemode] : []),
-    // Дополнительные аргументы строки запуска (свободный текст администратора).
     ...(server.additionalArgs ? splitArgs(server.additionalArgs) : []),
   ];
 
-  // detached: true на ВСЕХ платформах.
-  //  - Linux: отдельная группа процессов — killProcessTree(-pid) завершит всё дерево.
-  //  - Windows: выводит процесс из Job Object Electron/Chromium. Без этого флага
-  //    дочерний сервер умирает вместе с менеджером (KILL_ON_JOB_CLOSE) — тогда
-  //    «откреплённые» серверы не могут пережить закрытие менеджера.
-  // Цена: у сервера нет собственного консольного окна (DETACHED_PROCESS) — лог
-  // доступен во вкладке «Консоль» и в файле Logs/server-<identity>.log.
+  // detached: без него Electron убьёт сервер при своём выходе (job object)
   const child = spawn(exe, args, {
     cwd: server.installPath,
     stdio: ['ignore', 'pipe', 'pipe'],
     windowsHide: false,
     detached: true,
   });
-  // Метаданные записываем сразу — forwardProcessLog/appendToLogFile используют
-  // их для определения пути файла лога.
   processMeta.set(server.id, { server, intentionallyStopped: false });
   writeLogHeader(server);
   forwardProcessLog(child, server.id);
 
-  // Watchdog: фиксируем время старта и включаем проверку зависаний.
   const wst = getWatchdog(server.id);
   wst.lastLogAt = Date.now();
   wst.hangKilled = false;
   clearRestartTimer(server.id);
   ensureHangTimer();
 
-  // Ждём подтверждение spawn или ошибку запуска, чтобы не врать рендереру про «online».
   return new Promise((resolve) => {
     let settled = false;
 
@@ -418,7 +360,6 @@ export function startServer(server: ServerPayload): Promise<ServerStartResult> {
       resolve(result);
     };
 
-    // Страховка: если событий spawn/error не было вовсе — честный таймаут.
     const failTimer = setTimeout(() => {
       processes.delete(server.id);
       processMeta.delete(server.id);
@@ -427,7 +368,6 @@ export function startServer(server: ServerPayload): Promise<ServerStartResult> {
 
     child.once('spawn', () => {
       processes.set(server.id, child);
-      // Сообщаем рендереру о факте запуска процесса (обычный старт или авторестарт)
       onServerRunningHandler?.({ serverId: server.id, pid: child.pid });
       finish({ success: true, mode: 'real', pid: child.pid });
     });
@@ -445,10 +385,8 @@ export function startServer(server: ServerPayload): Promise<ServerStartResult> {
       const st = watchdogStates.get(server.id);
       const wasHangKill = st?.hangKilled ?? false;
       if (st) st.hangKilled = false;
-      // Выход без явной команды остановки = краш
       if (meta && !meta.intentionallyStopped) {
         onProcessExitHandler?.({ server: meta.server, code });
-        // Автоперезапуск при падении; при зависании рестарт уже запланирован выше.
         if (!wasHangKill) scheduleAutoRestart(meta.server, 'crash');
       }
     });
@@ -459,10 +397,8 @@ export function startServer(server: ServerPayload): Promise<ServerStartResult> {
 export function stopServer(id: string): ServerStopResult {
   const child = processes.get(id);
   if (child?.pid) {
-    // Помечаем остановку как намеренную — вебхук «краша» не отправится
     const meta = processMeta.get(id);
     if (meta) meta.intentionallyStopped = true;
-    // Ручная остановка: отменяем запланированный авторестарт и сбрасываем счётчик
     clearRestartTimer(id);
     const st = watchdogStates.get(id);
     if (st) {
@@ -477,7 +413,6 @@ export function stopServer(id: string): ServerStopResult {
     return { success: true, mode: 'real' };
   }
 
-  // Сервер мог быть запущен вне менеджера — останавливаем по PID из списка ОС
   const externalPid = externalPids.get(id);
   if (externalPid) {
     killProcessTree(externalPid);
@@ -498,7 +433,6 @@ export function statusOf(id: string): { running: boolean; pid?: number } {
       processes.delete(id);
     }
   }
-  // Процесс мог быть запущен вне менеджера и обнаружен через список ОС
   const externalPid = externalPids.get(id);
   if (externalPid) {
     try {
@@ -511,12 +445,10 @@ export function statusOf(id: string): { running: boolean; pid?: number } {
   return { running: false };
 }
 
-/** PID запущенного процесса сервера (для pidusage) — свой или внешний (переподключённый). */
 export function getPid(id: string): number | undefined {
   return statusOf(id).pid;
 }
 
-/** Реально ли запущен процесс сервера (свой или внешний). */
 export function isProcessRunning(id: string): boolean {
   return statusOf(id).running;
 }
@@ -529,27 +461,14 @@ export async function restartServer(server: ServerPayload): Promise<ServerStartR
 
 export function stopAll(): void {
   for (const id of Array.from(processes.keys())) stopServer(id);
-  // Внешние процессы (запущенные вне менеджера) при выходе не убиваем намеренно.
   externalPids.clear();
 }
 
 export interface ServerLogTailResult {
-  /** Смещение в файле, с которого нужно продолжать следующее чтение. */
   offset: number;
-  /** Новые полные строки лога. */
   lines: string[];
 }
 
-/**
- * Чтение хвоста файла лога сервера (Logs/server-<identity>.log).
- * При fromOffset = 0 возвращаются последние ~64 КБ (первое наполнение консоли),
- * при ненулевом — только новые строки после смещения.
- * При opts.sessionStart = true (только для fromOffset = 0) возвращаются строки
- * с последнего заголовка «[Manager] Server start requested» — то есть только
- * текущая сессия без устаревших строк прошлых запусков.
- * Консоль приложения использует этот pull-режим как основной источник,
- * чтобы показывать и прошлые строки, и живой лог независимо от шины событий.
- */
 export function readServerLogTail(
   server: ServerPayload,
   fromOffset: number,
@@ -565,7 +484,6 @@ export function readServerLogTail(
     const TAIL_BYTES = 64 * 1024;
 
     if (start === 0 && opts?.sessionStart) {
-      // Начало текущей сессии: ищем последний заголовок запуска сервера менеджером.
       const fd0 = fs.openSync(file, 'r');
       const buf0 = Buffer.alloc(size);
       fs.readSync(fd0, buf0, 0, size, 0);
@@ -600,10 +518,6 @@ export function readServerLogTail(
   }
 }
 
-/**
- * Полное чтение файла лога сервера для браузера логов (последние N строк).
- * Фильтрация и поиск выполняются в рендерере.
- */
 export function readServerLogFile(
   server: ServerPayload,
   maxLines = 4000
@@ -620,11 +534,6 @@ export function readServerLogFile(
   }
 }
 
-/**
- * Обнаружение реальных серверных процессов в ОС (могут быть запущены вне менеджера
- * или после перезапуска менеджера, когда PID не сохранился).
- * Возвращает map: serverId → PID для серверов, чей исполняемый файл лежит в installPath.
- */
 export async function detectExternalServers(servers: ServerPayload[]): Promise<Record<string, number>> {
   const result: Record<string, number> = {};
   const withPath = servers.filter((s) => s.installPath);
@@ -652,7 +561,6 @@ export async function detectExternalServers(servers: ServerPayload[]): Promise<R
         if (pid > 0 && exePath) running.push({ pid, exePath });
       }
     } else {
-      // Linux: ps — PID + командная строка; находим RustDedicated по имени в аргументах.
       const { stdout } = await execFileAsync('ps', ['-eo', 'pid=,args='], { timeout: 15_000 });
       for (const rawLine of stdout.split(/\r?\n/)) {
         const m = /^\s*(\d+)\s+(.+)$/.exec(rawLine);
@@ -665,7 +573,6 @@ export async function detectExternalServers(servers: ServerPayload[]): Promise<R
       }
     }
   } catch {
-    // нет доступа к процессам — считаем, что внешних серверов нет
   }
 
   for (const s of withPath) {

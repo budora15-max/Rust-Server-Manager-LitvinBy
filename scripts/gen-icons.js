@@ -1,7 +1,3 @@
-// Генерация build/icon.ico, build/icon.png, build/tray.png.
-// Чистый Node (zlib) — рисуем «щит» в цвете Rust-акцента, кодируем PNG вручную.
-// Запуск: node scripts/gen-icons.js
-
 const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
@@ -56,7 +52,6 @@ function encodePng(size, rgba) {
   ]);
 }
 
-// Контур щита в нормализованных координатах (0..1, y вниз).
 const SHIELD = [
   [0.22, 0.16],
   [0.78, 0.16],
@@ -127,10 +122,6 @@ function encodeIco(entries) {
   return Buffer.concat([header, ...dirs, ...blobs]);
 }
 
-/**
- * DIB-запись для ICO (32bpp, BGRA, bottom-up + пустая AND-маска).
- * Классический формат, который понимают и Windows, и NSIS (в отличие от PNG-in-ICO).
- */
 function bmpEntry(size, rgba) {
   const xorStride = size * 4;
   const xor = Buffer.alloc(xorStride * size);
@@ -175,4 +166,3 @@ fs.writeFileSync(
   ])
 );
 console.log('Icons written to build/ (icon.ico, icon.png, tray.png)');
-

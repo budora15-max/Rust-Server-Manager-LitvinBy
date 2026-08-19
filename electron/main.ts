@@ -45,26 +45,14 @@ import { getModsStatus, installOxide, removeMod } from './mods';
 
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
-/** true — пользователь явно вышел (трей → «Выход»); тогда закрытие окна завершает приложение. */
 let quitting = false;
 
 const DEV_URL = 'http://localhost:3000';
 
-/**
- * Резервная иконка трея (16×16 «щит», base64) — если build/tray.png вдруг недоступен.
- * Тот же рисунок, что генерирует scripts/gen-icons.js.
- */
 const TRAY_ICON_FALLBACK =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAALklEQVRjYBh+4EGYxX98mCgD1lgpYMWjBhBpAC5DiNaMHJXImkkyAN0VJGtGdwnD8AYAGZ8z1AAAAABJRU5ErkJggg==';
 
-// ---------------------------------------------------------------------------
-// Настройки приложения (userData/settings.json).
-// ---------------------------------------------------------------------------
-
 interface AppSettings {
-  /** Останавливать ли серверы при полном выходе из менеджера. По умолчанию false:
-   *  серверы продолжают работать («откреплённый» режим) и подхватываются
-   *  менеджером при следующем запуске. */
   stopServersOnExit: boolean;
 }
 
@@ -90,18 +78,14 @@ function saveSettings(): void {
     fs.mkdirSync(path.dirname(settingsFilePath()), { recursive: true });
     fs.writeFileSync(settingsFilePath(), JSON.stringify(settings, null, 2), 'utf8');
   } catch {
-    /* нет прав на запись — настройка не критична */
   }
 }
 
-/** Файл автозапуска на Linux (XDG autostart). */
 function linuxAutostartFile(): string {
   return path.join(os.homedir(), '.config', 'autostart', 'rust-server-manager.desktop');
 }
 
 function createWindow(): void {
-  // Иконка окна/панели задач (важно для dev-режима и Linux; в упакованном
-  // Windows-приложении иконку несёт сам exe).
   const winIcon = nativeImage.createFromPath(path.join(app.getAppPath(), 'build', 'icon.png'));
   mainWindow = new BrowserWindow({
     width: 1200,
@@ -123,7 +107,6 @@ function createWindow(): void {
   const isDev = !app.isPackaged;
 
   if (isDev) {
-    // Vite может подняться чуть позже Electron — повторяем попытки подключения.
     const loadWithRetry = (attempt = 0): void => {
       mainWindow?.loadURL(DEV_URL).catch(() => {
         if (attempt < 60) {
@@ -137,9 +120,6 @@ function createWindow(): void {
   }
 
   mainWindow.on('close', (e) => {
-    // Сворачиваем в трей вместо полного закрытия — серверы продолжают работать.
-    // Если трей недоступен (не создался), закрытие завершает приложение — иначе
-    // окно «застряло» бы скрытым без возможности вернуться.
     if (!quitting && tray) {
       e.preventDefault();
       mainWindow?.hide();
@@ -159,7 +139,6 @@ function showWindow(): void {
   mainWindow?.focus();
 }
 
-/** Одноразовая подсказка при первом сворачивании в трей: как вернуть иконку из «скрытых значков». */
 function showTrayHintOnce(): void {
   const hintFile = path.join(app.getPath('userData'), 'tray-hint-shown');
   try {
@@ -174,13 +153,11 @@ function showTrayHintOnce(): void {
       body: 'Приложение свёрнуто в трей. Если иконка не видна — нажмите «^» рядом с часами и перетащите её на панель задач.',
     }).show();
   } catch {
-    /* noop */
   }
 }
 
 app.whenReady().then(() => {
   loadSettings();
-  // AUMID нужен для системных уведомлений на Windows (иначе Notification не показывается).
   app.setAppUserModelId('com.rustservermanager.app');
   initLocale();
   loadScheduledWipes();
@@ -199,32 +176,22 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => {
-  // Окно скрывается в трей — приложение продолжает работать (следит за серверами).
   if (quitting && process.platform !== 'darwin') app.quit();
 });
 
 app.on('before-quit', () => {
   quitting = true;
-  // «Откреплённый» режим: по умолчанию серверы НЕ останавливаются при выходе
-  // менеджера и продолжают работать в фоне. При следующем запуске менеджер
-  // найдёт их по installPath и снова подключится (detectExternalServers).
-  // Включив настройку stopServersOnExit (трей), можно вернуть прежнее поведение.
+  // по дефолту серверы не глушим — пусть живут, на след. старте подхватим их
   if (settings.stopServersOnExit) stopAll();
   taskScheduler.stop();
   metricsCollector.stopAll();
   rconManager.dispose();
 });
 
-// ---------------------------------------------------------------------------
-// IPC: реальные операции — процессы, RCON, плагины, вайпы, конфиги, метрики.
-// ---------------------------------------------------------------------------
-
 const rconManager = new RconManager();
 
-/** Последний известный список серверов (для трея и автозапуска из main). */
 let cachedServers: ServerPayload[] = [];
 
-/** Подключение к WebRcon (если нужно — с переподключением) и отправка команды. */
 async function ensureRconSend(server: ServerPayload, command: string): Promise<boolean> {
   if (rconManager.isConnected(server.id)) return rconManager.send(server.id, command).ok;
   try {
@@ -246,10 +213,6 @@ function formatMb(bytes: number): string {
   return `${Math.max(1, Math.round(bytes / 1024))} KB`;
 }
 
-// ---------------------------------------------------------------------------
-// RustEdit: определение и открытие кастомной карты (custommap.*.map).
-// ---------------------------------------------------------------------------
-
 interface RusteditMapInfo {
   ok: boolean;
   isCustom: boolean;
@@ -260,7 +223,6 @@ interface RusteditMapInfo {
   error?: string;
 }
 
-/** Файл кастомной карты RustEdit (custommap.*.map) в identity-папке сервера. */
 function rusteditMapInfo(server: ServerPayload): RusteditMapInfo {
   if (!server.installPath) return { ok: false, isCustom: false, error: 'no-install-path' };
   const identityDir = path.join(server.installPath, 'server', server.identity);
@@ -286,7 +248,6 @@ function rusteditMapInfo(server: ServerPayload): RusteditMapInfo {
   }
 }
 
-/** Поиск RustEdit.exe в типовых местах установки. */
 function findRustEditExe(): string | null {
   const bases = [
     process.env.PROGRAMFILES,
@@ -298,7 +259,6 @@ function findRustEditExe(): string | null {
     const exe = path.join(base, 'RustEdit', 'RustEdit.exe');
     if (fs.existsSync(exe)) return exe;
   }
-  // Ограниченный поиск по типовым папкам пользователя (Documents/Desktop/Downloads).
   const scanDirs = [
     path.join(os.homedir(), 'Documents'),
     path.join(os.homedir(), 'Desktop'),
@@ -312,35 +272,24 @@ function findRustEditExe(): string | null {
         if (fs.existsSync(exe)) return exe;
       }
     } catch {
-      /* нет доступа — пропускаем */
     }
   }
   return null;
 }
 
-// ---------------------------------------------------------------------------
-// RustEdit: расширение Oxide.Ext.RustEdit.dll (нужно для запуска кастомных карт).
-// Файл поставляется вместе с RustEdit; собранный dll также лежит в репозитории
-// автора (k1lly0u/Oxide.Ext.RustEdit) — оттуда его можно скачать.
-// ---------------------------------------------------------------------------
-
-/** Официальный источник собранного Oxide.Ext.RustEdit.dll. */
 const RUSTEDIT_DLL_URL =
   'https://raw.githubusercontent.com/k1lly0u/Oxide.Ext.RustEdit/master/Oxide.Ext.RustEdit.dll';
 
-/** Путь к папке Oxide сервера (там лежат расширения Oxide). */
 function oxideDir(server: ServerPayload): string {
   return path.join(server.installPath ?? '', 'oxide');
 }
 
-/** Статус расширения RustEdit на сервере (Oxide.Ext.RustEdit.dll в папке oxide). */
 function rusteditExtensionStatus(server: ServerPayload): { ok: boolean; installed: boolean; path?: string } {
   if (!server.installPath) return { ok: false, installed: false };
   const p = path.join(oxideDir(server), 'Oxide.Ext.RustEdit.dll');
   return { ok: true, installed: fs.existsSync(p), path: p };
 }
 
-/** Поиск Oxide.Ext.RustEdit.dll в установке RustEdit (рядом с exe / Documents\RustEdit). */
 function findRustEditDll(): string | null {
   const exe = findRustEditExe();
   if (exe) {
@@ -356,10 +305,8 @@ function findRustEditDll(): string | null {
   return null;
 }
 
-/** Иконка в трее + быстрые действия. Файл build/tray.png генерируется скриптом gen-icons. */
 function createTray(): void {
   if (tray) return;
-  // Диагностика: состояние трея пишется в userData/tray-debug.log.
   const trayLog = (msg: string): void => {
     try {
       fs.appendFileSync(
@@ -367,7 +314,6 @@ function createTray(): void {
         `[${new Date().toISOString()}] ${msg}\n`
       );
     } catch {
-      /* noop */
     }
   };
   const iconPath = path.join(app.getAppPath(), 'build', 'tray.png');
@@ -376,7 +322,6 @@ function createTray(): void {
     let image = nativeImage.createFromBuffer(fs.readFileSync(iconPath));
     trayLog(`image empty=${image.isEmpty()} size=${JSON.stringify(image.getSize())}`);
     if (image.isEmpty()) {
-      // Встроенная резервная иконка — трей всегда видимый, даже если PNG пропал.
       image = nativeImage.createFromDataURL(TRAY_ICON_FALLBACK);
     }
     tray = new Tray(image.resize({ width: 16, height: 16 }));
@@ -426,7 +371,6 @@ function createTray(): void {
   tray.on('click', () => showWindow());
 }
 
-/** Обработчики задач планировщика (перезапуски / предупреждения / автобэкапы / авторазбаны). */
 function taskSchedulerActions(): TaskActions {
   return {
     onRestart(task: ScheduledTask): void {
@@ -437,7 +381,6 @@ function taskSchedulerActions(): TaskActions {
         : 'Not running — nothing to restart';
       if (wasRunning) {
         stopServer(server.id);
-        // Даём портам освободиться и поднимаем сервер заново (с автообновлением при флаге).
         setTimeout(() => void startServerWithAutoUpdate(server), 5000);
       }
       taskScheduler.save();
@@ -522,7 +465,6 @@ function taskSchedulerActions(): TaskActions {
           });
         }
         if (!ok && target) {
-          // Не смогли связаться с сервером — пробуем ещё раз через 10 минут.
           taskScheduler.add({
             ...task,
             id: `unban_${task.serverId}_${Date.now()}`,
@@ -539,7 +481,6 @@ const taskScheduler = new TaskScheduler(
   path.join(app.getPath('userData'), 'scheduled-tasks.json'),
   taskSchedulerActions()
 );
-// Уведомление о краше процесса (неожиданный exit без команды остановки)
 setOnProcessExit(({ server, code }) => {
   sendWebhookEvent(server.id, {
     serverId: server.id,
@@ -566,14 +507,11 @@ setOnProcessExit(({ server, code }) => {
     serverName: server.name,
     map: server.map,
   });
-  // Сообщаем рендереру, чтобы статус сервера обновился сразу, а не после перезапуска.
   broadcast('server:process-exit', { serverId: server.id, code });
 });
 
-// Поток лога запущенных серверов (stdout/stderr RustDedicatedServer.exe) → консоль приложения
 setOnServerLog((line) => broadcast('server:log', line));
 
-// Watchdog: авторестарт запланирован / процесс запущен автоматически
 setOnAutoRestart((info) => {
   broadcast('server:auto-restart', info);
   const srv = cachedServers.find((s) => s.id === info.serverId);
@@ -606,10 +544,6 @@ function broadcast(channel: string, payload: unknown): void {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Планировщик вайпов: расписание хранится в userData и выполняется в main.
-// ---------------------------------------------------------------------------
-
 function scheduleFile(): string {
   return path.join(app.getPath('userData'), 'scheduled-wipes.json');
 }
@@ -632,7 +566,6 @@ function saveScheduledWipes(): void {
     fs.mkdirSync(path.dirname(scheduleFile()), { recursive: true });
     fs.writeFileSync(scheduleFile(), JSON.stringify(scheduledWipes, null, 2), 'utf8');
   } catch {
-    // файл недоступен — не критично
   }
 }
 
@@ -644,7 +577,6 @@ function nextWipeDate(freq: ScheduledWipeEntry['frequency'], from: Date): Date {
   return d;
 }
 
-/** Вайп с остановкой и перезапуском сервера (если он был запущен). */
 async function runWipe(server: ServerPayload, options: WipeOptions): Promise<WipeResult & { restarted?: boolean }> {
   const wasRunning = isProcessRunning(server.id);
   if (wasRunning) stopServer(server.id);
@@ -657,7 +589,6 @@ async function runWipe(server: ServerPayload, options: WipeOptions): Promise<Wip
   }
 
   if (wasRunning && result.ok) {
-    // даём портам освободиться и поднимаем сервер заново
     setTimeout(() => void startServer(server), 5000);
     return { ...result, restarted: true };
   }
@@ -718,7 +649,6 @@ function startWipeScheduler(): void {
   }, 30_000).unref();
 }
 
-/** Поля сервера для экспорта/импорта конфигурации (без транзиентного состояния). */
 const EXPORT_FIELDS: Array<keyof ServerPayload> = [
   'identity',
   'gamemode',
@@ -763,10 +693,6 @@ function pickServerFields(s: ServerPayload): Partial<ServerPayload> {
   return out;
 }
 
-/**
- * Автообновление сервера и Oxide перед запуском (по флагу autoUpdateOnRestart).
- * Прогресс транслируется в тот же канал, что и ручное обновление (server:update-progress).
- */
 async function maybeAutoUpdate(server: ServerPayload): Promise<{ ok: boolean; error?: string }> {
   if (!server.autoUpdateOnRestart || !server.installPath) return { ok: true };
   const ru = getLocale() === 'ru';
@@ -803,14 +729,12 @@ async function maybeAutoUpdate(server: ServerPayload): Promise<{ ok: boolean; er
   }
 }
 
-/** Запуск сервера: при флаге autoUpdateOnRestart сначала обновляем игру и Oxide. */
 async function startServerWithAutoUpdate(server: ServerPayload): Promise<ServerStartResult> {
   const pre = await maybeAutoUpdate(server);
   if (!pre.ok) return { success: false, mode: 'real', error: pre.error ?? 'Auto-update failed' };
   return startServer(server);
 }
 
-/** Перезапуск сервера с автообновлением (аналог restartServer + maybeAutoUpdate). */
 async function restartServerWithAutoUpdate(server: ServerPayload): Promise<ServerStartResult> {
   stopServer(server.id);
   await new Promise((r) => setTimeout(r, 1500));
@@ -818,13 +742,11 @@ async function restartServerWithAutoUpdate(server: ServerPayload): Promise<Serve
 }
 
 function registerIpc(): void {
-  // --- Управление процессами Rust-серверов ---
   ipcMain.handle('server:start', async (_event, server: ServerPayload) => {
     const result = await startServerWithAutoUpdate(server);
     if (result.success && result.mode === 'real') {
       metricsCollector.start(server, result.pid);
     }
-    // Вебхук о старте — только для реального запуска процесса, не для симуляции.
     if (result.success && result.mode === 'real') {
       sendWebhookEvent(server.id, {
         serverId: server.id,
@@ -848,7 +770,6 @@ function registerIpc(): void {
   ipcMain.handle('server:stop', (_event, server: ServerPayload) => {
     metricsCollector.stop(server.id);
     const result = stopServer(server.id);
-    // Вебхук об остановке — только для реально остановленного процесса.
     if (result.success && result.mode === 'real') {
       sendWebhookEvent(server.id, {
         serverId: server.id,
@@ -873,11 +794,8 @@ function registerIpc(): void {
   });
   ipcMain.handle('server:status', (_event, id: string) => statusOf(id));
 
-  // Проверка наличия исполняемого файла сервера в папке установки
   ipcMain.handle('server:find-exe', (_event, installPath: string) => findExecutableInfo(installPath));
 
-  // Обнаружение запущенных в ОС серверов (для честных статусов после рестарта менеджера).
-  // Найденные процессы «прикрепляются» обратно: запускается сбор метрик по их PID.
   ipcMain.handle('server:detect-external', async (_event, servers: ServerPayload[]) => {
     const pids = await detectExternalServers(servers);
     for (const s of servers) {
@@ -887,17 +805,14 @@ function registerIpc(): void {
     return pids;
   });
 
-  // Чтение лога сервера из файла (консоль приложения, pull-режим)
   ipcMain.handle(
     'server:log-tail',
     (_event, server: ServerPayload, fromOffset: number, opts?: { sessionStart?: boolean }) =>
       readServerLogTail(server, fromOffset, opts)
   );
 
-  // --- Телеметрия ---
   ipcMain.handle('metrics:last', (_event, id: string) => metricsCollector.last(id));
 
-  // --- Системная память: занято всеми процессами + общий объём (os) ---
   ipcMain.handle('system:memory', () => {
     const total = os.totalmem();
     const free = os.freemem();
@@ -908,7 +823,6 @@ function registerIpc(): void {
     };
   });
 
-  // --- WebRcon ---
   ipcMain.handle('rcon:connect', (_event, payload: RconConnectPayload) => rconManager.connect(payload));
   ipcMain.handle('rcon:disconnect', (_event, serverId: string) => rconManager.disconnect(serverId));
   ipcMain.handle('rcon:send', (_event, payload: { serverId: string; command: string }) =>
@@ -916,12 +830,8 @@ function registerIpc(): void {
   );
   ipcMain.handle('rcon:status', () => rconManager.status());
 
-  // --- Карта мира: превью (PNG, создаваемая сервером) ---
   ipcMain.handle('map:get-preview', (_event, server: ServerPayload) => {
     if (!server.installPath) return { ok: false, error: 'no-install-path' };
-    // Ищем самый свежий PNG/JPG в server/<identity>/ и подпапках (map/, debug/):
-    // сюда Rust кладёт и превью write.png (старые версии), и debug/ore-nodes.png
-    // (spawn.ore_map — современные версии, где write.png удалён).
     const identityDir = path.join(server.installPath, 'server', server.identity);
     try {
       if (!fs.existsSync(identityDir)) return { ok: false, error: 'not-found' };
@@ -943,7 +853,6 @@ function registerIpc(): void {
             try {
               files.push({ name: e.name, file: full, mtime: fs.statSync(full).mtimeMs });
             } catch {
-              /* файл мог исчезнуть между чтением и stat */
             }
           }
         }
@@ -963,12 +872,9 @@ function registerIpc(): void {
     }
   });
 
-  // Карта мира: запросить актуальное изображение у работающего сервера.
-  // В современных версиях Rust команда write.png удалена — используем spawn.ore_map
-  // (создаёт server/<identity>/debug/ore-nodes.png — карта руды). write.png
-  // дополнительно отправляем для старых версий, где он создаёт полноценное превью.
   ipcMain.handle('map:capture', async (_event, server: ServerPayload) => {
     if (!isProcessRunning(server.id)) return { ok: false, error: 'server-offline' };
+    // write.png из Rust выпилили — качаем карту руды, но старым сборкам шлём оба
     const [ore, write] = await Promise.all([
       ensureRconSend(server, 'spawn.ore_map'),
       ensureRconSend(server, 'write.png'),
@@ -976,10 +882,8 @@ function registerIpc(): void {
     return ore || write ? { ok: true } : { ok: false, error: 'rcon-failed' };
   });
 
-  // --- RustEdit: кастомная карта (custommap.*.map) ---
   ipcMain.handle('map:rustedit-info', (_event, server: ServerPayload) => rusteditMapInfo(server));
 
-  // Открыть кастомную карту в RustEdit (найденный exe или ассоциация .map в системе).
   ipcMain.handle('map:open-in-rustedit', async (_event, server: ServerPayload) => {
     const info = rusteditMapInfo(server);
     if (!info.ok || !info.filePath) {
@@ -1002,14 +906,10 @@ function registerIpc(): void {
     }
   });
 
-  // --- RustEdit: расширение Oxide.Ext.RustEdit.dll (для кастомных карт) ---
   ipcMain.handle('rustedit:extension-status', (_event, server: ServerPayload) =>
     rusteditExtensionStatus(server)
   );
 
-  // Устанавливает Oxide.Ext.RustEdit.dll в папку oxide сервера: сначала копирует
-  // из установки RustEdit (файл идёт вместе с редактором), иначе скачивает
-  // собранный dll с GitHub (k1lly0u/Oxide.Ext.RustEdit).
   ipcMain.handle('rustedit:extension-install', async (_event, server: ServerPayload) => {
     if (!server.installPath) return { ok: false, error: 'no-install-path' };
     const target = path.join(oxideDir(server), 'Oxide.Ext.RustEdit.dll');
@@ -1031,7 +931,6 @@ function registerIpc(): void {
     }
   });
 
-  // Удаляет расширение из папки oxide сервера.
   ipcMain.handle('rustedit:extension-remove', (_event, server: ServerPayload) => {
     const p = path.join(oxideDir(server), 'Oxide.Ext.RustEdit.dll');
     try {
@@ -1042,7 +941,6 @@ function registerIpc(): void {
     }
   });
 
-  // Список игроков (JSON из команды playerlist)
   ipcMain.handle('rcon:playerlist', async (_event, serverId: string) => {
     if (!rconManager.isConnected(serverId)) return { ok: false, error: 'Not connected' };
     const text = await rconManager.request(serverId, 'playerlist', 5000);
@@ -1055,7 +953,6 @@ function registerIpc(): void {
     }
   });
 
-  // Список забаненных (JSON из команды banned)
   ipcMain.handle('rcon:bannedlist', async (_event, serverId: string) => {
     if (!rconManager.isConnected(serverId)) return { ok: false, error: 'Not connected' };
     const text = await rconManager.request(serverId, 'banned', 5000);
@@ -1068,7 +965,6 @@ function registerIpc(): void {
     }
   });
 
-  // Действия над игроком: kick / ban / unban (по имени или SteamID)
   ipcMain.handle(
     'rcon:player-action',
     (
@@ -1095,7 +991,6 @@ function registerIpc(): void {
       }
       const sent = rconManager.send(serverId, cmd);
 
-      // Временный бан: планируем авторазбан.
       let unbanTaskId: string | undefined;
       let unbanAt: string | undefined;
       if (sent && action === 'ban' && isSteamId && durationMinutes && durationMinutes > 0 && server) {
@@ -1133,7 +1028,6 @@ function registerIpc(): void {
     }
   );
 
-  // --- Плагины Oxide ---
   ipcMain.handle('plugins:list', (_event, server: ServerPayload) => listPlugins(server));
   ipcMain.handle('plugins:delete', (_event, payload: { filePath: string }) =>
     deletePlugin(payload.filePath)
@@ -1148,14 +1042,12 @@ function registerIpc(): void {
     updateAllPlugins(server)
   );
 
-  // --- Marketplace плагинов ---
   ipcMain.handle('marketplace:get-list', (_event, lang: string) => getMarketplaceList(lang));
   ipcMain.handle('marketplace:search', (_event, query: string) => searchMarketplace(query));
   ipcMain.handle('marketplace:install', (_event, payload: { server: ServerPayload; slug: string }) =>
     installMarketplacePlugin(payload.server, payload.slug)
   );
 
-  // --- Установка плагина с диска: выбор папки с .cs файлами ---
   ipcMain.handle('plugins:pick-dir', async () => {
     const win = BrowserWindow.getFocusedWindow() ?? mainWindow ?? undefined;
     if (!win) return { ok: false, error: 'no-window' };
@@ -1177,7 +1069,6 @@ function registerIpc(): void {
     return { ok: true, dir, files };
   });
 
-  // Копирование выбранного .cs файла в oxide/plugins сервера
   ipcMain.handle(
     'plugins:install-from-disk',
     (_event, payload: { server: ServerPayload; dir: string; fileName: string }) => {
@@ -1194,13 +1085,11 @@ function registerIpc(): void {
     }
   );
 
-  // --- Конфигурация server.cfg ---
   ipcMain.handle('config:read', (_event, server: ServerPayload) => readServerConfig(server));
   ipcMain.handle('config:save', (_event, payload: { server: ServerPayload; config: Record<string, string> }) =>
     saveServerConfig(payload.server, payload.config)
   );
 
-  // --- Вайпы ---
   ipcMain.handle('wipe:execute', async (_event, payload: { server: ServerPayload; options: WipeOptions }) => {
     const result = await runWipe(payload.server, payload.options);
     if (result.ok) {
@@ -1237,7 +1126,6 @@ function registerIpc(): void {
     return result;
   });
 
-  // --- Планировщик вайпов ---
   ipcMain.handle('wipes:scheduled-list', () => scheduledWipes);
   ipcMain.handle('wipes:scheduled-add', (_event, entry: ScheduledWipeEntry) => {
     scheduledWipes = scheduledWipes.filter((w) => w.id !== entry.id);
@@ -1253,7 +1141,6 @@ function registerIpc(): void {
     return scheduledWipes;
   });
 
-  // --- Бэкапы мира ---
   ipcMain.handle('backup:create', (_event, server: ServerPayload, label?: string) =>
     createWorldBackup(server, label)
   );
@@ -1265,7 +1152,6 @@ function registerIpc(): void {
     deleteWorldBackup(server, backupId)
   );
 
-  // --- Discord Webhooks ---
   ipcMain.handle('webhook:get-config', (_event, serverId: string) => loadWebhookConfig(serverId));
   ipcMain.handle('webhook:save-config', (_event, payload: { serverId: string; config: WebhookConfig }) =>
     saveWebhookConfig(payload.serverId, payload.config)
@@ -1274,11 +1160,9 @@ function registerIpc(): void {
     sendWebhookTest(payload.config)
   );
 
-  // --- Локализация ---
   ipcMain.handle('locale:get', () => getLocale());
   ipcMain.handle('locale:set', (_event, lng: string) => setLocale(lng));
 
-  // --- Обновление серверной части Rust (SteamCMD) ---
   ipcMain.handle('server:update', (_event, server: ServerPayload) => {
     const emit = (event: SteamProgressEvent) => {
       broadcast('server:update-progress', { serverId: server.id, ...event });
@@ -1286,13 +1170,11 @@ function registerIpc(): void {
     return updateRustServer(server, emit);
   });
 
-  // Отмена текущего обновления (убивает процесс SteamCMD).
   ipcMain.handle('server:update-cancel', () => {
     cancelUpdate();
     return { ok: true };
   });
 
-  // --- Системные ---
   ipcMain.handle('dialog:pick-folder', async () => {
     const win = BrowserWindow.getFocusedWindow() ?? mainWindow ?? undefined;
     if (!win) return null;
@@ -1303,12 +1185,10 @@ function registerIpc(): void {
     return result.canceled ? null : result.filePaths[0];
   });
 
-  // --- Синхронизация списка серверов с main (трей / автозапуск) ---
   ipcMain.handle('server:sync-servers', (_event, servers: ServerPayload[]) => {
     cachedServers = Array.isArray(servers) ? servers : [];
   });
 
-  // --- Планировщик задач: перезапуски / автобэкапы / авторазбаны ---
   ipcMain.handle('tasks:list', () => taskScheduler.list());
   ipcMain.handle('tasks:add-restart', (_event, input: RestartScheduleInput) => {
     taskScheduler.addRestart(input);
@@ -1326,7 +1206,6 @@ function registerIpc(): void {
     return taskScheduler.list();
   });
 
-  // --- Автозапуск менеджера с Windows ---
   ipcMain.handle('app:get-auto-launch', () => {
     if (process.platform === 'linux') {
       return { openAtLogin: fs.existsSync(linuxAutostartFile()) };
@@ -1357,7 +1236,6 @@ function registerIpc(): void {
     return { ok: true, openAtLogin: enabled };
   });
 
-  // --- Экспорт / импорт конфигурации сервера ---
   ipcMain.handle('server:export-config', async (_event, server: ServerPayload) => {
     const win = BrowserWindow.getFocusedWindow() ?? mainWindow ?? undefined;
     if (!win) return { ok: false, error: 'No window' };
@@ -1413,12 +1291,10 @@ function registerIpc(): void {
     }
   });
 
-  // --- История метрик (посещаемость) ---
   ipcMain.handle('metrics:history', (_event, serverId: string, sinceMs?: number) =>
     readMetricsHistory(serverId, sinceMs)
   );
 
-  // --- Центр уведомлений ---
   ipcMain.handle('notifications:list', () => listNotifications());
   ipcMain.handle('notifications:mark-all-read', () => {
     markAllNotificationsRead();
@@ -1429,7 +1305,6 @@ function registerIpc(): void {
     broadcast('notifications:changed', {});
   });
 
-  // --- Telegram-уведомления ---
   ipcMain.handle('telegram:get-config', (_event, serverId: string) => loadTelegramConfig(serverId));
   ipcMain.handle('telegram:save-config', (_event, payload: { serverId: string; config: TelegramConfig }) =>
     saveTelegramConfig(payload.serverId, payload.config)
@@ -1438,7 +1313,6 @@ function registerIpc(): void {
     sendTelegramTest(payload.config)
   );
 
-  // --- Плагины: вкл/выкл + конфиги ---
   ipcMain.handle('plugins:set-enabled', (_event, payload: { plugin: PluginInfo; enabled: boolean }) =>
     setPluginEnabled(payload.plugin, payload.enabled)
   );
@@ -1451,12 +1325,10 @@ function registerIpc(): void {
       savePluginConfig(payload.server, payload.pluginName, payload.config)
   );
 
-  // --- Браузер логов ---
   ipcMain.handle('server:log-browser', (_event, server: ServerPayload, maxLines?: number) =>
     readServerLogFile(server, maxLines)
   );
 
-  // --- Порты сервера ---
   ipcMain.handle('ports:check', async (_event, server: ServerPayload) => {
     const st = statusOf(server.id);
     return checkLocalPorts(server, st.pid);
@@ -1480,14 +1352,11 @@ function registerIpc(): void {
     probeExternal(host, port)
   );
 
-  // --- Открытие внешних ссылок в браузере по умолчанию ---
   ipcMain.handle('shell:open-external', (_event, url: string) => {
     if (/^https?:\/\//i.test(url)) void shell.openExternal(url);
   });
 
-  // --- Менеджер модов (Oxide) ---
   ipcMain.handle('mods:status', (_event, server: ServerPayload) => getModsStatus(server));
   ipcMain.handle('mods:install', (_event, server: ServerPayload) => installOxide(server));
   ipcMain.handle('mods:remove', (_event, server: ServerPayload) => removeMod(server));
 }
-

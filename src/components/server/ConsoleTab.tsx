@@ -26,7 +26,6 @@ export function ConsoleTab({ server }: { server: RustServer }) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const connRef = useRef<ConnState>('idle');
 
-  // Быстрые команды (избранное) — хранятся в localStorage
   const QUICK_KEY = 'rsm.quickCommands';
   const [quick, setQuick] = useState<string[]>(() => {
     try {
@@ -42,7 +41,6 @@ export function ConsoleTab({ server }: { server: RustServer }) {
     try {
       localStorage.setItem(QUICK_KEY, JSON.stringify(quick));
     } catch {
-      // localStorage недоступен — не критично
     }
   }, [quick]);
 
@@ -50,7 +48,6 @@ export function ConsoleTab({ server }: { server: RustServer }) {
     connRef.current = conn;
   }, [conn]);
 
-  // Синхронизация пароля с текущим rcon.password сервера (если изменился в General).
   useEffect(() => {
     setPassword(server.rconPassword);
   }, [server.rconPassword]);
@@ -63,13 +60,11 @@ export function ConsoleTab({ server }: { server: RustServer }) {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [lines]);
 
-  // Поток RCON-событий из main-процесса
   useEffect(() => {
     if (!bridge?.onRconLine) return;
     const unsubscribe = bridge.onRconLine((event: RconLineEvent) => {
       if (event.serverId !== server.id) return;
       if (connRef.current !== 'connected') return;
-      // Консольный вывод сервера уже показывается из файла лога — не дублируем.
       if (event.kind === 'console') return;
       const tag =
         event.kind === 'chat'
@@ -84,15 +79,10 @@ export function ConsoleTab({ server }: { server: RustServer }) {
     return unsubscribe;
   }, [bridge, server.id]);
 
-  // Лог процесса сервера — читаем из файла Logs/server-<identity>.log (pull-режим).
-  // Читаем только когда сервер реально запущен: без этого открытие вкладки
-  // показывало бы устаревшие строки прошлых сессий. Первое чтение начинаем
-  // с заголовка текущей сессии (sessionStart), чтобы не выводить старый лог.
   const serverRunning = server.status === 'online' || server.status === 'starting';
 
   useEffect(() => {
     if (!serverRunning) {
-      // Сервер не запущен — убираем строки прошлых сессий, файл не читаем.
       setLines((prev) => {
         const without = prev.filter((l) => !l.startsWith('[Server]'));
         if (without.some((l) => l.startsWith('[--:--:--] [System]'))) return without;
@@ -101,7 +91,6 @@ export function ConsoleTab({ server }: { server: RustServer }) {
       return;
     }
     if (!bridge?.serverLogTail) return;
-    // Скрываем старый хинт «сервер не запущен» и начинаем читать текущую сессию.
     setLines((prev) => prev.filter((l) => !l.startsWith('[--:--:--] [System]')));
 
     let cancelled = false;
@@ -122,7 +111,6 @@ export function ConsoleTab({ server }: { server: RustServer }) {
           setLines((prev) => [...prev, ...incoming].slice(-MAX_LINES));
         }
       } catch {
-        // IPC временно недоступен — попробуем на следующем тике
       }
     };
     void load();
@@ -133,7 +121,6 @@ export function ConsoleTab({ server }: { server: RustServer }) {
     };
   }, [bridge, server.id, server.installPath, server.identity, serverRunning]);
 
-  /** Преобразование технической ошибки WebRcon в понятную подсказку. */
   const translateConnectError = (raw: string): string => {
     const s = raw.toLowerCase();
     const insecure = ` ${t('console.errorInsecurePasswordHint')}`;
@@ -193,7 +180,6 @@ export function ConsoleTab({ server }: { server: RustServer }) {
     await runCommand(cmd);
   };
 
-  /** Отправка команды (или локальный ответ в демо-режиме). */
   const runCommand = async (raw: string) => {
     const cmd = raw.trim();
     if (!cmd) return;
@@ -207,7 +193,6 @@ export function ConsoleTab({ server }: { server: RustServer }) {
 
     append(`${ts} [RCON] > ${cmd}`);
     if (bridge) {
-      // Electron: не подменяем реальный ответ фейковым «успехом».
       append(
         serverRunning
           ? `${ts} [RCON] ${t('console.notConnectedHonest')}`
@@ -216,7 +201,6 @@ export function ConsoleTab({ server }: { server: RustServer }) {
       return;
     }
 
-    // Браузерное демо без моста: локальный ответ.
     const reply =
       cmd.toLowerCase() === 'status'
         ? t('console.statusReply', {
@@ -249,7 +233,6 @@ export function ConsoleTab({ server }: { server: RustServer }) {
           : line.includes('[Rsp]')
             ? 'text-violet-400/90'
             : 'text-emerald-400/80';
-
 
   return (
     <div>

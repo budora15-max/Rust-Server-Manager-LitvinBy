@@ -22,7 +22,6 @@ export function ModsTab({ server }: ModsTabProps) {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
 
-  // Расширение Oxide.Ext.RustEdit.dll (нужно для запуска кастомных карт RustEdit).
   const [extInstalled, setExtInstalled] = useState<boolean | null>(null);
   const [extBusy, setExtBusy] = useState<'install' | 'remove' | null>(null);
   const [extMsg, setExtMsg] = useState('');

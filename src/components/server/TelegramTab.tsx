@@ -113,7 +113,6 @@ export function TelegramTab({ server }: TelegramTabProps) {
     }
   };
 
-
   return (
     <div className="max-w-3xl">
       {notice && (

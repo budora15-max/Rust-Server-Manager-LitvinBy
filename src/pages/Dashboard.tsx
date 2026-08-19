@@ -34,7 +34,6 @@ export default function Dashboard() {
         )
       : 0;
 
-  // Суммарная RAM всех работающих серверов (из живых метрик).
   const serversRamMb = servers.reduce((acc, s) => acc + (metrics[s.id]?.memoryMb ?? 0), 0);
 
   const stats = [

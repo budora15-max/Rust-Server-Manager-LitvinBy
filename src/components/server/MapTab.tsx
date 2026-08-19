@@ -9,9 +9,7 @@ interface Preview {
   fileName: string;
 }
 
-/** Автообновление превью (карта меняется по мере исследования мира). */
 const REFRESH_MS = 60_000;
-/** Пауза после write.png, пока сервер пишет PNG. */
 const CAPTURE_DELAY_MS = 4_000;
 
 export function MapTab({ server }: { server: RustServer }) {
@@ -30,7 +28,6 @@ export function MapTab({ server }: { server: RustServer }) {
   const [rusteditOpening, setRusteditOpening] = useState(false);
   const [rusteditOpenError, setRusteditOpenError] = useState<string | null>(null);
 
-  // Кастомная карта RustEdit (custommap.*.map) в identity-папке сервера.
   useEffect(() => {
     const bridge = window.rustManager;
     if (!bridge?.mapRusteditInfo) return;
@@ -127,9 +124,6 @@ export function MapTab({ server }: { server: RustServer }) {
 
   const isOnline = server.status === 'online' || server.status === 'sim';
 
-  // Полноценная карта мира по сиду доступна на rustmaps.com (рендер ландшафта).
-  // Работает для Procedural Map; локально Rust такой PNG не сохраняет.
-  // Формат URL rustmaps.com: /map/<worldsize>_<seed> (например /map/2600_456123).
   const isProcedural = !server.map || /procedural/i.test(server.map);
   const rustmapsUrl =
     isProcedural && server.seed > 0

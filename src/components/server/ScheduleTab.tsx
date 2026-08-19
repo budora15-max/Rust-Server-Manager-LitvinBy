@@ -80,7 +80,6 @@ export function ScheduleTab({ server }: ScheduleTabProps) {
       const list = await bridge.tasksList();
       setTasks((list ?? []).filter((task) => task.serverId === server.id));
     } catch {
-      // IPC недоступен
     }
   }, [bridge, server.id]);
 
@@ -130,7 +129,6 @@ export function ScheduleTab({ server }: ScheduleTabProps) {
       flash(err instanceof Error ? err.message : String(err), true);
     }
   };
-
 
   const addBackup = async (e: FormEvent) => {
     e.preventDefault();
@@ -271,7 +269,6 @@ export function ScheduleTab({ server }: ScheduleTabProps) {
         )}
       </div>
 
-
       {/* Автобэкапы */}
       <div className="mt-6 overflow-hidden rounded-xl border border-[#232833] bg-surface">
         <div className="flex items-center gap-2 border-b border-[#232833] bg-[#1a1e26] px-4 py-2.5 text-sm font-semibold text-textMain">
@@ -369,7 +366,6 @@ export function ScheduleTab({ server }: ScheduleTabProps) {
           </Button>
         </form>
 
-
         {backups.length === 0 ? (
           <p className="p-6 text-center text-sm text-textMuted">{t('schedule.noBackups')}</p>
         ) : (
@@ -410,4 +406,3 @@ export function ScheduleTab({ server }: ScheduleTabProps) {
     </div>
   );
 }
-

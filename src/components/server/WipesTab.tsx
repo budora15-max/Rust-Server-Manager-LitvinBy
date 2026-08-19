@@ -87,7 +87,6 @@ export function WipesTab({ server, onSeedChange }: WipesTabProps) {
       setWipes(w ?? []);
       setBackups(b ?? []);
     } catch {
-      // IPC недоступен
     }
   };
 
@@ -96,7 +95,6 @@ export function WipesTab({ server, onSeedChange }: WipesTabProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [server.id]);
 
-  // Расписание изменилось (добавлено/удалено/выполнено в main) — перезагружаем список
   useEffect(() => {
     if (!bridge?.onWipeScheduleChanged) return;
     return bridge.onWipeScheduleChanged(() => {
@@ -104,7 +102,6 @@ export function WipesTab({ server, onSeedChange }: WipesTabProps) {
     });
   }, [bridge]);
 
-  // Вайп выполнен планировщиком — уведомляем и обновляем сид
   useEffect(() => {
     if (!bridge?.onWipeExecuted) return;
     return bridge.onWipeExecuted((event) => {
@@ -126,7 +123,6 @@ export function WipesTab({ server, onSeedChange }: WipesTabProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bridge, server.id]);
 
-  // Сид изменился (вайп с новым сидом) — синхронизируем с общим состоянием
   useEffect(() => {
     if (!bridge?.onServerSeedChanged) return;
     return bridge.onServerSeedChanged((event) => {
@@ -275,7 +271,6 @@ export function WipesTab({ server, onSeedChange }: WipesTabProps) {
     executeWipe({ wipeMap: true, wipeDb: true, regenerateSeed: true }, t('wipes.manual'));
   };
 
-
   return (
     <div className="max-w-5xl">
       {notice && (
@@ -358,7 +353,6 @@ export function WipesTab({ server, onSeedChange }: WipesTabProps) {
         )}
       </div>
 
-
       {/* Статус + кнопка немедленного вайпа */}
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#232833] bg-surface px-5 py-4">
         <div>
@@ -424,7 +418,6 @@ export function WipesTab({ server, onSeedChange }: WipesTabProps) {
         )}
       </form>
 
-
       {/* Список запланированных вайпов */}
       <div className="mt-6">
         <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-textMain">
@@ -485,7 +478,6 @@ export function WipesTab({ server, onSeedChange }: WipesTabProps) {
         onConfirm={runNow}
       />
 
-
       <ConfirmModal
         open={toDelete !== null}
         title={t('wipes.removeTitle')}
@@ -518,4 +510,3 @@ export function WipesTab({ server, onSeedChange }: WipesTabProps) {
     </div>
   );
 }
-

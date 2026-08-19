@@ -14,13 +14,9 @@ export interface MetricSample {
 }
 
 const TICK_MS = 5_000;
-/** RCON-опрос serverinfo/fps — каждые 2 тика (10 секунд), чтобы не флудить. */
 const RCON_POLL_TICKS = 2;
-/** Попытка авто-подключения к RCON — не чаще раза в 30 секунд. */
 const RCON_RECONNECT_MS = 30_000;
-/** После серии неудачных авторизаций (неверный пароль) — длинная пауза, чтобы не получить бан. */
 const AUTH_BACKOFF_MS = 10 * 60_000;
-/** Число неудачных авторизаций подряд, после которого включается длинная пауза. */
 const AUTH_FAIL_LIMIT = 3;
 
 interface ParsedServerInfo {
@@ -30,7 +26,6 @@ interface ParsedServerInfo {
 }
 
 function parseServerInfo(text: string): ParsedServerInfo | null {
-  // Новый формат (JSON-объект): {"Players": N, "MaxPlayers": M, "Framerate": ...}
   try {
     const obj = JSON.parse(text);
     if (obj && typeof obj === 'object') {
@@ -46,19 +41,15 @@ function parseServerInfo(text: string): ParsedServerInfo | null {
       }
     }
   } catch {
-    // не JSON — пробуем старый текстовый формат ниже
   }
-  // Старый формат: "Players: 0 / 100"
   const m = /Players:\s*(\d+)\s*\/\s*(\d+)/i.exec(text);
   if (m) return { online: Number(m[1]), max: Number(m[2]) };
   return null;
 }
 
 function parseFps(text: string): number | null {
-  // Новый формат: "215 FPS"
   const m1 = /([\d.]+)\s*fps/i.exec(text);
   if (m1) return Number(m1[1]);
-  // Старый формат: "server fps: 240" / "fps: 240"
   const m2 = /(?:server\s+)?fps:\s*([\d.]+)/i.exec(text);
   if (m2) return Number(m2[1]);
   return null;
@@ -72,16 +63,11 @@ export function parseFpsLine(text: string): number | null {
   return parseFps(text);
 }
 
-/**
- * Автоматический сбор телеметрии запущенных Rust-серверов:
- * CPU/RAM/аптайм через pidusage (по PID процесса), игроки/FPS через RCON.
- */
 export class MetricsCollector {
   private timers = new Map<string, NodeJS.Timeout>();
   private ticks = new Map<string, number>();
   private lastConnectAt = new Map<string, number>();
   private lastSample = new Map<string, MetricSample>();
-  /** Число неудачных авторизаций RCON подряд (для защиты от бана при неверном пароле). */
   private authFailures = new Map<string, number>();
   private lastAuthFailAt = new Map<string, number>();
 
@@ -122,12 +108,9 @@ export class MetricsCollector {
     const tick = (this.ticks.get(server.id) ?? 0) + 1;
     this.ticks.set(server.id, tick);
 
-    // Авто-подключение к WebRcon, если процесс реальный (не чаще 1 раза в 30 сек)
     if (pid && !this.rcon.isConnected(server.id)) {
       const last = this.lastConnectAt.get(server.id) ?? 0;
       if (Date.now() - last > RCON_RECONNECT_MS) {
-        // Защита от бана: после серии неудачных авторизаций (неверный пароль)
-        // перестаём долбить RCON на длительное время.
         const fails = this.authFailures.get(server.id) ?? 0;
         const lastFail = this.lastAuthFailAt.get(server.id) ?? 0;
         if (fails >= AUTH_FAIL_LIMIT && Date.now() - lastFail < AUTH_BACKOFF_MS) {
@@ -157,7 +140,6 @@ export class MetricsCollector {
       }
     }
 
-    // Системные метрики процесса
     let cpu = 0;
     let memoryMb = 0;
     let uptimeSeconds = 0;
@@ -168,11 +150,9 @@ export class MetricsCollector {
         memoryMb = Math.round(stat.memory / (1024 * 1024));
         uptimeSeconds = Math.round(stat.elapsed);
       } catch {
-        // процесс мог завершиться между тиками
       }
     }
 
-    // RCON-метрики (игроки / FPS)
     const prev = this.lastSample.get(server.id);
     let online = prev?.onlinePlayers ?? 0;
     let max = prev?.maxPlayers ?? 0;
@@ -187,10 +167,8 @@ export class MetricsCollector {
       if (parsed) {
         online = parsed.online;
         max = parsed.max;
-        // В новом формате serverinfo уже содержит Framerate
         if (parsed.framerate !== undefined) fps = Math.round(parsed.framerate);
       }
-      // Фолбэк: если FPS не пришёл из serverinfo — парсим ответ команды fps
       if (fps === 0 && fpsText) {
         const parsedFps = parseFps(fpsText);
         if (parsedFps !== null) fps = Math.round(parsedFps);

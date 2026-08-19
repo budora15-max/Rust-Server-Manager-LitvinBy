@@ -147,7 +147,6 @@ const EVENT_DESCS: Partial<Record<TelegramEventPayload['event'], WebhookEventKey
   'server-wipe': 'wipeDesc',
 };
 
-/** Отправка события в Telegram с учётом сохранённого конфига сервера. */
 export async function sendTelegramEvent(serverId: string, payload: TelegramEventPayload): Promise<void> {
   const config = loadTelegramConfig(serverId);
   const toggle = EVENT_TOGGLES[payload.event];

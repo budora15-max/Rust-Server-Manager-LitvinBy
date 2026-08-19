@@ -3,13 +3,11 @@ import * as path from 'path';
 import { httpGet } from './http';
 import type { PluginInfo, PluginUpdateStatus, PluginsListResult, ServerPayload } from './types';
 
-/** Папка идентичности сервера: <installPath>/server/<identity>. */
 function identityDir(server: ServerPayload): string | null {
   if (!server.installPath) return null;
   return path.join(server.installPath, 'server', server.identity);
 }
 
-/** Парсинг метаданных Oxide-плагина из заголовка файла (.cs). */
 const INFO_RE =
   /\[Info\("(?<name>[^"]+)",\s*"(?<author>[^"]+)",\s*"(?<version>[^"]+)"(?<rest>[^\]]*)\]/;
 const RESOURCE_ID_RE = /ResourceId\s*=\s*(\d+)/i;
@@ -35,7 +33,6 @@ function parseOxideHeader(filePath: string): PluginHeader | null {
       };
     }
   } catch {
-    // файл может быть занят или бинарный
   }
   return null;
 }
@@ -119,17 +116,11 @@ export function listPlugins(server: ServerPayload): PluginsListResult {
   };
 }
 
-// ---------------------------------------------------------------------------
-// uMod: сверка версий и обновление плагинов
-// ---------------------------------------------------------------------------
-
 interface UmodMeta {
   latestVersion: string;
   downloadUrl: string;
 }
 
-// Кэш ответов uMod: не ходим в API при каждом заходе в настройки,
-// иначе uMod может вернуть rate-limit (429) и бейджи обновлений "пропадут".
 const UMOD_CACHE_TTL_MS = 30 * 60_000;
 const umodCache = new Map<string, { info: UmodMeta; at: number }>();
 
@@ -140,7 +131,6 @@ function slugCandidates(name: string): string[] {
   return slugs.length > 0 ? slugs : [name.trim().toLowerCase()];
 }
 
-/** Сравнение версий "a.b.c": 1 = первая выше, -1 = вторая выше, 0 = равны. */
 export function compareVersions(a: string, b: string): number {
   const pa = String(a).split('.').map((n) => Number(n) || 0);
   const pb = String(b).split('.').map((n) => Number(n) || 0);
@@ -154,7 +144,6 @@ export function compareVersions(a: string, b: string): number {
   return 0;
 }
 
-/** Метаданные плагина с umod.org: актуальная версия и ссылка на скачивание (с кэшем). */
 export async function getLatestPluginInfo(name: string): Promise<UmodMeta | null> {
   const cached = umodCache.get(name);
   if (cached && Date.now() - cached.at < UMOD_CACHE_TTL_MS) return cached.info;
@@ -177,13 +166,11 @@ export async function getLatestPluginInfo(name: string): Promise<UmodMeta | null
         }
       }
     } catch {
-      // пробуем следующий slug
     }
   }
   return null;
 }
 
-/** Проверка наличия обновлений для всех Oxide-плагинов сервера. */
 export async function checkPluginUpdates(
   server: ServerPayload
 ): Promise<PluginUpdateStatus[]> {
@@ -242,7 +229,6 @@ export async function updatePlugin(
       return { ok: false, error: 'Downloaded file looks invalid — update aborted.' };
     }
 
-    // перезаписываем файл (снимаем суффикс .disabled, чтобы плагин включился)
     const target = plugin.fileName.replace(/\.disabled$/i, '');
     const targetPath = path.join(path.dirname(plugin.path), target);
     fs.writeFileSync(targetPath, res.body);
@@ -259,7 +245,6 @@ export async function updatePlugin(
   }
 }
 
-/** Обновление всех плагинов с доступными обновлениями (по очереди). */
 export async function updateAllPlugins(
   server: ServerPayload
 ): Promise<Array<{ name: string; ok: boolean; message?: string; error?: string }>> {
@@ -283,7 +268,6 @@ export function deletePlugin(filePath: string): { ok: boolean; error?: string } 
   }
 }
 
-/** Включение/выключение плагина: переименование в <name>.cs.disabled и обратно. */
 export function setPluginEnabled(
   plugin: PluginInfo,
   enabled: boolean
@@ -312,7 +296,6 @@ export function setPluginEnabled(
   }
 }
 
-/** Чтение JSON-конфига плагина Oxide. */
 export function readPluginConfig(
   server: ServerPayload,
   pluginName: string
@@ -329,11 +312,9 @@ export function readPluginConfig(
       }
     }
   }
-  // Конфига ещё нет — вернём путь, куда он будет создан (Oxide).
   return { ok: true, path: path.join(idDir, 'oxide', 'config', `${pluginName}.json`), config: {} };
 }
 
-/** Сохранение JSON-конфига плагина. */
 export function savePluginConfig(
   server: ServerPayload,
   pluginName: string,

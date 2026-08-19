@@ -1,5 +1,3 @@
-// Тесты планировщика задач (перезапуски / автобэкапы / авторазбаны).
-// Запуск: npm test (компилирует electron и запускает node --test tests/)
 const { test } = require('node:test');
 const assert = require('node:assert');
 const os = require('node:os');
@@ -38,7 +36,6 @@ test('nextDailyAt: earlier/later/equal times', () => {
 });
 
 test('nextWeeklyAt: Friday from Saturday', () => {
-  // 2026-01-10 — суббота
   const dw = nextWeeklyAt(5, '06:00', new Date(2026, 0, 10, 10, 0, 0));
   assert.strictEqual(dw.getDay(), 5);
   assert.strictEqual(dw.getHours(), 6);
@@ -73,7 +70,6 @@ test('addRestart: restart + warnings, persisted', () => {
   assert.ok(warn1, 'warn 1 task exists');
   assert.strictEqual(Date.parse(restart.nextRun) - Date.parse(warn1.nextRun), 1 * 60000);
 
-  // Персистентность
   const s2 = new TaskScheduler(file, { onRestart() {}, onWarning() {}, onBackup() {}, onUnban() {} });
   s2.load();
   assert.strictEqual(s2.list().length, s.list().length);
@@ -141,7 +137,6 @@ test('tick: one-shot fired and removed, repeating rescheduled', () => {
   assert.ok(!s.list().find((t) => t.id === 'owarn'));
   assert.ok(!s.list().find((t) => t.id === 'oban'));
 
-  // Повторяющаяся задача (restart) — пересчитывает nextRun после срабатывания
   s.add({ id: 'orestart', serverId: 'srv1', type: 'restart', nextRun: new Date(Date.now() - 1000).toISOString(), createdAt: Date.now(), server, time: '06:00' });
   const before = calls.restart;
   s.tick();

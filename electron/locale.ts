@@ -10,7 +10,6 @@ function localePath(): string {
   return path.join(app.getPath('userData'), 'locale.json');
 }
 
-/** Текущий язык приложения (синхронизируется из рендерера). */
 export function getLocale(): AppLocale {
   return cachedLocale;
 }
@@ -20,12 +19,10 @@ export function setLocale(lng: string): AppLocale {
   try {
     fs.writeFileSync(localePath(), JSON.stringify({ locale: cachedLocale }), 'utf8');
   } catch {
-    // запись не критична
   }
   return cachedLocale;
 }
 
-/** Загрузка сохранённого языка при старте main-процесса. */
 export function initLocale(): void {
   try {
     const raw = fs.readFileSync(localePath(), 'utf8');
@@ -89,7 +86,6 @@ const DICT: Record<AppLocale, Record<WebhookEventKey, string>> = {
   },
 };
 
-/** Локализованная строка для вебхуков с подстановкой {{key}} из vars. */
 export function trWebhook(
   key: WebhookEventKey,
   vars?: Record<string, string | number>

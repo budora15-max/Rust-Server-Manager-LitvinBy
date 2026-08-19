@@ -9,7 +9,6 @@ interface AuthResult {
   error?: string;
 }
 
-/** Преобразование технических ошибок WebSocket в понятные подсказки. */
 function normalizeConnectError(message: string): string {
   if (/Parse Error|Expected HTTP/i.test(message)) {
     return 'Non-WebSocket response — check that the port is the RCON port (usually game port + 2) and rcon.web 1 is enabled';
@@ -17,12 +16,6 @@ function normalizeConnectError(message: string): string {
   return message;
 }
 
-/**
- * WebRcon-клиент для Rust.
- * Основной способ (официальный Facepunch): ws://host:port/<password> — пароль в URL-пути,
- * авторизация неявная (open = авторизован). Фолбэк: ws://host:port/rcon + сообщение
- * rcon.login (ответ авторизации — Type: 'Auth'). Консольный вывод сервера — Identifier -1.
- */
 class RconClient {
   private ws: WebSocket | null = null;
   private hbTimer: NodeJS.Timeout | null = null;
@@ -46,7 +39,6 @@ class RconClient {
     return new Promise((resolve) => {
       const state = { settled: false };
 
-      // Страховка: если WebSocket не эмитит вообще ничего — резолвим через 15 сек
       const overallTimer = setTimeout(() => {
         if (!state.settled) {
           state.settled = true;
@@ -61,19 +53,10 @@ class RconClient {
         resolve(result);
       };
 
-      // Способ A (официальный Facepunch): пароль в URL-пути ws://host:port/<password>.
-      // Сервер может не поддерживать классический rcon.login — тогда пробуем способ B.
       this.openSocket(host, port, password, true, finish, state);
     });
   }
 
-  /**
-   * Открытие WebSocket-подключения к WebRcon.
-   * useUrlPassword = true — официальный Facepunch-вариант: пароль в URL-пути
-   *   ws://host:port/<password>; авторизация неявная (open = авторизован).
-   * useUrlPassword = false — классический: ws://host:port/rcon + rcon.login (ответ Type: 'Auth').
-   * Если способ с паролем в URL падает на хендшейке — автоматически пробуем классический.
-   */
   private openSocket(
     host: string,
     port: number,
@@ -98,14 +81,12 @@ class RconClient {
     ws.on('open', () => {
       this.log('system', `WebRcon: connected to ${url}`);
       if (useUrlPassword) {
-        // Пароль в URL: авторизация прошла вместе с хендшейком.
         this.startHeartbeat();
         this.log('system', 'WebRcon: authenticated (password in URL)');
         finish({ ok: true });
         return;
       }
 
-      // Классический способ: отправляем rcon.login и ждём ответ Auth.
       const authTimer = setTimeout(() => {
         const resolver = this.authResolver;
         this.authResolver = null;
@@ -138,18 +119,15 @@ class RconClient {
       try {
         this.handleMessage(String(data));
       } catch {
-        // игнорируем некорректные кадры
       }
     });
 
     ws.on('error', (err) => {
       const message = normalizeConnectError(err.message);
-      // Способ A не прошёл (сервер ждёт rcon.login по /rcon) — пробуем классический один раз.
       if (useUrlPassword && !state.settled) {
         try {
           ws.terminate();
         } catch {
-          // сокет уже закрыт
         }
         this.openSocket(host, port, password, false, finish, state);
         return;
@@ -163,7 +141,6 @@ class RconClient {
     ws.on('close', (code) => {
       this.stopHeartbeat();
       this.log('system', `WebRcon: disconnected (${code})`);
-      // Закрытие старого сокета после фолбэка не должно «ломать» новое подключение.
       const isCurrent = this.ws === ws;
       if (!isCurrent) return;
       this.ws = null;
@@ -174,7 +151,6 @@ class RconClient {
     });
   }
 
-
   private handleMessage(raw: string): void {
     const msg = JSON.parse(raw) as {
       Identifier?: number;
@@ -184,7 +160,6 @@ class RconClient {
     };
     const { Identifier, Message, Type } = msg;
 
-    // Результат авторизации
     if (Type === 'Auth') {
       const text = String(Message ?? '');
       const failed = /wrong|invalid|failed|denied|error/i.test(text);
@@ -194,19 +169,16 @@ class RconClient {
       return;
     }
 
-    // Трансляция консоли сервера (Identifier -1, а в свежих сборках — 0 с Type Generic)
     if (Identifier === -1) {
       this.log(Type === 'Chat' ? 'chat' : 'console', String(Message ?? ''));
       return;
     }
 
-    // Чат (Identifier 0 с Type Chat)
     if (Identifier === 0) {
       this.log(Type === 'Chat' ? 'chat' : 'console', String(Message ?? ''));
       return;
     }
 
-    // Ответ на команду
     if (typeof Identifier === 'number' && Identifier > 1 && Identifier !== this.hbId) {
       const resolver = this.pending.get(Identifier);
       if (resolver) {
@@ -247,10 +219,6 @@ class RconClient {
     return true;
   }
 
-  /**
-   * Отправка команды с ожиданием ответа (request/response).
-   * Возвращает текст ответа или null при таймауте/отключении.
-   */
   request(command: string, timeoutMs = 5000): Promise<string | null> {
     if (!this.connected) return Promise.resolve(null);
     this.nextId += 1;

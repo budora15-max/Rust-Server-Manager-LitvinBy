@@ -17,7 +17,6 @@ function fmtTime(ts: number): string {
   }
 }
 
-/** Колокольчик центра уведомлений (события: краш, вайп, бэкап, перезапуск, бан). */
 export function NotificationsBell() {
   const bridge = window.rustManager;
   const { t } = useTranslation();
@@ -30,7 +29,6 @@ export function NotificationsBell() {
     try {
       setItems(await bridge.notificationsList());
     } catch {
-      // IPC недоступен
     }
   }, [bridge]);
 
@@ -40,7 +38,6 @@ export function NotificationsBell() {
     return bridge.onNotificationsChanged(() => void load());
   }, [bridge, load]);
 
-  // Закрытие по клику вне панели
   useEffect(() => {
     const onDocClick = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);

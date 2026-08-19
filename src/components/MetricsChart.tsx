@@ -10,7 +10,6 @@ interface MetricsChartProps {
   className?: string;
 }
 
-/** Мини-график (SVG-спарклайн) для метрик сервера. */
 export function MetricsChart({
   label,
   value,
@@ -23,9 +22,6 @@ export function MetricsChart({
   const width = 100;
   const height = 32;
   const lastPoints = data.slice(-24);
-  // Шкала по умолчанию 100 (проценты); если данные больше — график автоматически
-  // масштабируется по фактическому максимуму (например, RAM в МБ без жёсткой
-  // привязки к «8 ГБ» — сколько всего выделено серверу, неизвестно).
   const dataMax = lastPoints.reduce((m, v) => Math.max(m, v), 0);
   const scaleMax = Math.max(max, dataMax, 1);
 
@@ -80,4 +76,3 @@ export function MetricsChart({
     </div>
   );
 }
-

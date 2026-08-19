@@ -5,39 +5,22 @@ export type LicenseType = 'Free' | 'Pro' | 'Enterprise';
 export interface RustServer {
   id: string;
   identity: string;
-  /** Игровой режим сервера (конвар gamemode): '' = Vanilla, softcore, hardcore, ... */
   gamemode?: string;
-  /** URL кастомной карты (server.levelurl). */
   levelurl?: string;
-  /** Теги сервера (server.tags), максимум 3: pve, roleplay, creative, ... */
   tags?: string[];
-  /** Тег периодичности вайпов (часть server.tags): weekly / biweekly / monthly. */
   wipeFrequencyTag?: string;
-  /** Тег региона сервера (часть server.tags): eu, na, ru, ... */
   regionTag?: string;
-  /** Описание сервера (server.description); \n — перевод строки. */
   description?: string;
-  /** URL-ссылка сервера (server.url). */
   url?: string;
-  /** Картинка сервера (server.headerimage), PNG/JPG 512×256 или 1024×512. */
   headerImage?: string;
-  /** Логотип сервера (server.logoimage), PNG/JPG 256×256. */
   logoImage?: string;
-  /** Интервал автосохранения в секундах (server.saveinterval; 300 = 5 минут). */
   saveInterval?: number;
-  /** Дополнительные аргументы строки запуска. */
   additionalArgs?: string;
-  /** Автообновление сервера и Oxide при (пере)запуске через менеджер. */
   autoUpdateOnRestart?: boolean;
-  /** Тикрейт сервера (server.tickrate; 30/60/100). */
   tickrate?: number;
-  /** Порт query-запросов (server.queryport; по умолчанию порт игры + 1). */
   queryport?: number;
-  /** Пароль для входа на сервер (server.password; пусто = без пароля). */
   password?: string;
-  /** Античит EAC/VAC (server.secure). */
   eac?: boolean;
-  /** Steam-ветка для SteamCMD (например publicbeta; пусто = стабильная). */
   steamBetaBranch?: string;
   name: string;
   status: ServerStatus;
@@ -52,22 +35,14 @@ export interface RustServer {
   map: string;
   uptimeSeconds: number;
   installedPlugins: number;
-  /** Папка установки Rust-сервера (где лежит RustDedicatedServer.exe или RustDedicated.exe). Пусто = симуляция. */
   installPath: string;
   rconHost: string;
-  /** Порт WebRcon; по умолчанию порт игры + 2. */
   rconPort: number;
-  /** Текст последней ошибки запуска/остановки сервера (если есть). */
   lastError?: string;
-  /** PID процесса, обнаруженного в ОС (запущен вне менеджера или после рестарта менеджера). */
   externalPid?: number;
-  /** Автоперезапуск при неожиданном падении процесса (по умолчанию true). */
   autoRestartOnCrash?: boolean;
-  /** Автоперезапуск при «зависании» — нет вывода процесса заданное время (по умолчанию false). */
   autoRestartOnHang?: boolean;
-  /** Минуты без вывода процесса, после которых сервер считается зависшим. */
   hangTimeoutMinutes?: number;
-  /** Запускать сервер автоматически при старте менеджера. */
   startWithManager?: boolean;
 }
 
@@ -91,9 +66,7 @@ export interface PluginInfo {
   source: PluginSource;
   sizeBytes: number;
   enabled: boolean;
-  /** Oxide ResourceId из заголовка [Info(..., ResourceId = N)]. */
   resourceId?: number;
-  /** Актуальная версия на uMod (после проверки обновлений). */
   latestVersion?: string;
   updateAvailable?: boolean;
 }
@@ -107,7 +80,6 @@ export interface ScheduledWipe {
   regenerateSeed: boolean;
 }
 
-/** Запланированный вайп с привязкой к серверу (хранится в main-процессе). */
 export interface ScheduledWipeEntry extends ScheduledWipe {
   serverId: string;
   server: RustServer;
@@ -115,7 +87,6 @@ export interface ScheduledWipeEntry extends ScheduledWipe {
   lastResult?: string;
 }
 
-/** Игрок из RCON-команды playerlist. */
 export interface RconPlayer {
   SteamID: string;
   Name: string;
@@ -124,7 +95,6 @@ export interface RconPlayer {
   Health?: number;
 }
 
-/** Забаненный игрок из RCON-команды banned. */
 export interface RconBannedPlayer {
   SteamID: string;
   Name: string;
@@ -133,7 +103,6 @@ export interface RconBannedPlayer {
   Time?: number;
 }
 
-/** Резервная копия мира. */
 export interface BackupEntry {
   id: string;
   path: string;
@@ -155,8 +124,6 @@ export interface RconLineEvent {
   line: string;
   ts: string;
 }
-
-// --- Результаты IPC-вызовов ---
 
 export interface ServerStartResult {
   success: boolean;
@@ -188,8 +155,6 @@ export interface WipeResult {
   deletedFiles: string[];
   message?: string;
 }
-
-// --- Телеметрия / конфиги / обновления ---
 
 export interface MetricSample {
   serverId: string;
@@ -243,9 +208,7 @@ export interface MarketplacePlugin {
   author: string;
   category: string;
   downloads: number;
-  /** Актуальная версия на uMod (например v2.0.0). */
   version?: string;
-  /** Ссылка на страницу плагина на uMod. */
   url?: string;
 }
 
@@ -259,8 +222,6 @@ export interface WebhookConfig {
   notifyWipe: boolean;
 }
 
-// --- Центр уведомлений ---
-
 export interface NotificationEntry {
   id: string;
   at: number;
@@ -271,8 +232,6 @@ export interface NotificationEntry {
   body: string;
   read: boolean;
 }
-
-// --- Порты сервера ---
 
 export type PortState = 'free' | 'used' | 'managed' | 'unknown';
 
@@ -298,8 +257,6 @@ export interface ExternalProbeResult {
   error?: string;
 }
 
-// --- Менеджер модов (Oxide) ---
-
 export interface ModStatus {
   installed: boolean;
   remoteVersion?: string;
@@ -312,8 +269,6 @@ export interface ModsStatusResult {
   oxide: ModStatus;
 }
 
-// --- Telegram-уведомления ---
-
 export interface TelegramConfig {
   token: string;
   chatId: string;
@@ -324,8 +279,6 @@ export interface TelegramConfig {
   notifyRestart: boolean;
   notifyBackup: boolean;
 }
-
-// --- Планировщик задач: перезапуски / автобэкапы / авторазбаны ---
 
 export type ScheduledTaskType = 'restart' | 'restartwarn' | 'backup' | 'unban';
 
@@ -369,4 +322,3 @@ export interface BackupScheduleInput {
   retention?: number;
   label?: string;
 }
-

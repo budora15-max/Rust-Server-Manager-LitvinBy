@@ -13,11 +13,6 @@ function pushSample(history: MetricSample[] | undefined, sample: MetricSample): 
   return next.length > MAX_POINTS ? next.slice(-MAX_POINTS) : next;
 }
 
-/**
- * Контекст телеметрии: подписывается на поток метрик из main-процесса (реальный процесс + RCON).
- * Демо-метрики генерируются только в браузерном режиме без Electron-моста,
- * чтобы UI оставался тестируемым, но в собранном приложении не показывать ложные цифры.
- */
 export function MetricsProvider({ children }: { children: ReactNode }) {
   const { servers } = useServer();
   const [history, setHistory] = useState<History>({});
@@ -27,7 +22,6 @@ export function MetricsProvider({ children }: { children: ReactNode }) {
     serversRef.current = servers;
   }, [servers]);
 
-  // Реальный поток метрик (Electron main → rcon/pidusage)
   useEffect(() => {
     const bridge = window.rustManager;
     if (!bridge?.onMetrics) return;
@@ -40,9 +34,6 @@ export function MetricsProvider({ children }: { children: ReactNode }) {
     return unsubscribe;
   }, []);
 
-  // Демо-генератор — только для браузерного режима без Electron-моста.
-  // В Electron метрики приходят исключительно из main-процесса (реальный процесс + RCON);
-  // фабриковать «игроков/ФПС» здесь нельзя — это создаёт ложное впечатление запущенного сервера.
   useEffect(() => {
     if (window.rustManager) return;
     const timer = setInterval(() => {
@@ -90,11 +81,6 @@ export function MetricsProvider({ children }: { children: ReactNode }) {
   return <MetricsContext.Provider value={history}>{children}</MetricsContext.Provider>;
 }
 
-/** Последние метрики по каждому серверу.
- * Отдаём сэмпл только для «живых» серверов (online/starting/sim):
- * когда сервер остановлен или упал, последний сэмпл прошлой сессии
- * остаётся в истории и без этой фильтрации выглядит как текущая нагрузка.
- */
 export function useMetrics(): Record<string, MetricSample> {
   const history = useContext(MetricsContext);
   const { servers } = useServer();
@@ -110,8 +96,6 @@ export function useMetrics(): Record<string, MetricSample> {
   return latest;
 }
 
-/** История точек метрик для графика конкретного сервера. */
 export function useMetricHistory(serverId: string): MetricSample[] {
   return useContext(MetricsContext)[serverId] ?? [];
 }
-

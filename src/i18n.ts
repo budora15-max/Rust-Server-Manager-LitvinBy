@@ -27,13 +27,11 @@ i18n
       escapeValue: false,
     },
     detection: {
-      // Язык сохраняется в localStorage (ключ i18nextLng) — переживает перезапуск
       order: ['localStorage', 'navigator'],
       caches: ['localStorage'],
     },
   });
 
-// Синхронизация выбранного языка с main-процессом (для локализации Discord-вебхуков)
 i18n.on('languageChanged', (lng: string) => {
   window.rustManager?.setLocale(lng);
 });

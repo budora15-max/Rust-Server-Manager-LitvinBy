@@ -97,7 +97,6 @@ export default function ServerPage() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [updateState, setUpdateState] = useState<UpdatePanelState | null>(null);
 
-  // Прогресс обновления сервера (SteamCMD): этапы, скорость, лог.
   useEffect(() => {
     const bridge = window.rustManager;
     if (!bridge?.onServerUpdateProgress) return;
@@ -118,7 +117,6 @@ export default function ServerPage() {
     return unsubscribe;
   }, [server?.id]);
 
-  // Синхронизация счётчика плагинов (для «Свойств сервера» и карточек на дашборде).
   useEffect(() => {
     const bridge = window.rustManager;
     if (!bridge || !server?.installPath) return;
@@ -419,7 +417,6 @@ export default function ServerPage() {
   );
 }
 
-/** Блок живых метрик сервера (игроки, FPS, CPU, RAM). */
 function ServerMetrics({ serverId }: { serverId: string }) {
   const { t } = useTranslation();
   const metrics = useMetrics();

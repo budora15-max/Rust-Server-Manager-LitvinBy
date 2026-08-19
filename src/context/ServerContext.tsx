@@ -4,11 +4,8 @@ import i18n from '@/i18n';
 
 const STORAGE_KEY = 'rsm.servers';
 
-// Демо-серверы убраны: в продакшн-режиме фейковые «онлайн» серверы с игроками
-// вводят пользователя в заблуждение. Первый запуск встречает пустым списком.
 const DEFAULT_SERVERS: RustServer[] = [];
 
-/** Генерация безопасного RCON-пароля: Rust отключает RCON для слабых/известных паролей. */
 function generateRconPassword(): string {
   const chars = 'abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let out = '';
@@ -53,7 +50,6 @@ function loadInitial(): RustServer[] {
     if (raw) {
       const parsed = JSON.parse(raw) as RustServer[];
       if (Array.isArray(parsed) && parsed.length > 0) {
-        // Миграция старых демо-данных: сервер без installPath не может быть реально online.
         return parsed.map((s) =>
           !s.installPath && (s.status === 'online' || s.status === 'sim')
             ? { ...s, status: 'offline' as const, onlinePlayers: 0, cpu: 0, lastError: undefined }
@@ -62,7 +58,6 @@ function loadInitial(): RustServer[] {
       }
     }
   } catch {
-    // повреждённые данные — используем дефолты
   }
   return DEFAULT_SERVERS;
 }
@@ -70,7 +65,6 @@ function loadInitial(): RustServer[] {
 export function ServerProvider({ children }: { children: ReactNode }) {
   const [servers, setServers] = useState<RustServer[]>(loadInitial);
 
-  // Актуальный список для эффектов (избегаем пересоздания при каждом рендере)
   const serversRef = useRef(servers);
   useEffect(() => {
     serversRef.current = servers;
@@ -80,13 +74,10 @@ export function ServerProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(servers));
   }, [servers]);
 
-  // Актуальный список серверов для main-процесса (трей / автозапуск серверов).
   useEffect(() => {
     window.rustManager?.syncServers(servers);
   }, [servers]);
 
-  // Базовый подсчёт плагинов (installedPlugins) для карточек и «Свойств сервера»
-  // при старте менеджера — чтобы не показывать 0 при реально установленных плагинах.
   useEffect(() => {
     const bridge = window.rustManager;
     if (!bridge) return;
@@ -105,7 +96,6 @@ export function ServerProvider({ children }: { children: ReactNode }) {
             );
           }
         } catch {
-          // IPC недоступен (браузерное демо) — пропускаем
         }
       }
     })();
@@ -120,19 +110,13 @@ export function ServerProvider({ children }: { children: ReactNode }) {
   const setServerError = (id: string, error?: string) =>
     setServers((prev) => prev.map((s) => (s.id === id ? { ...s, lastError: error } : s)));
 
-  /** PID внешнего процесса (запущен вне менеджера) — чтобы кнопка «Остановить» работала. */
   const setExternalPid = (id: string, pid?: number) =>
     setServers((prev) => prev.map((s) => (s.id === id ? { ...s, externalPid: pid } : s)));
 
   const delaySetStatus = (id: string, status: RustServer['status'], ms: number) =>
     setTimeout(() => setStatus(id, status), ms);
 
-  // После перезапуска менеджера PID процессов не переносятся между сессиями.
-  // Сверяем сохранённые статусы с реальным состоянием процессов в ОС одним
-  // проходом: серверы, запущенные менеджером в прошлой сессии (или вне менеджера)
-  // и оставшиеся работать после его закрытия, «прикрепляются» обратно — статус
-  // online + externalPid (кнопки управления и метрики снова работают).
-  // «online»/«sim» из прошлой сессии без живого процесса — это ложь → offline.
+  // после рестарта менеджера PID теряются — цепляем живые процессы по installPath
   useEffect(() => {
     const bridge = window.rustManager;
     if (!bridge) return;
@@ -173,8 +157,6 @@ export function ServerProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // Неожиданное завершение процесса (закрыто окно сервера, краш и т.п.) —
-  // обновляем статус сразу, не дожидаясь перезапуска менеджера.
   useEffect(() => {
     const bridge = window.rustManager;
     if (!bridge?.onServerProcessExit) return;
@@ -196,7 +178,6 @@ export function ServerProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  // Watchdog: менеджер сам перезапускает сервер после падения/зависания.
   useEffect(() => {
     const bridge = window.rustManager;
     if (!bridge?.onServerAutoRestart) return;
@@ -212,7 +193,6 @@ export function ServerProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  // Процесс реально запущен (обычный старт или авторестарт watchdog).
   useEffect(() => {
     const bridge = window.rustManager;
     if (!bridge?.onServerProcessRunning) return;
@@ -269,7 +249,6 @@ export function ServerProvider({ children }: { children: ReactNode }) {
             setExternalPid(id, undefined);
             pollUntilRunning(id, 20);
           } else if (res.success && res.mode === 'sim') {
-            // Симуляция: процесс не запущен — показываем честный статус вместо «Online».
             setServerError(
               id,
               i18n.t('serverPage.simModeDetail', {
@@ -353,7 +332,6 @@ export function ServerProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Автозапуск серверов с флагом startWithManager (один раз при старте менеджера).
   const autoStartTriedRef = useRef(false);
   const startServerRef = useRef(startServer);
   useEffect(() => {
@@ -378,7 +356,6 @@ export function ServerProvider({ children }: { children: ReactNode }) {
   const updateServer = (id: string, patch: Partial<RustServer>) =>
     setServers((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)));
 
-  /** Добавление нового сервера в менеджер (с дефолтными значениями). */
   const addServer = (input: NewServerInput): string => {
     const port = input.port ?? 28015;
     const server: RustServer = {
@@ -414,7 +391,6 @@ export function ServerProvider({ children }: { children: ReactNode }) {
     return server.id;
   };
 
-  /** Удаление сервера из менеджера (файлы на диске не затрагиваются). */
   const removeServer = (id: string) =>
     setServers((prev) => prev.filter((s) => s.id !== id));
 

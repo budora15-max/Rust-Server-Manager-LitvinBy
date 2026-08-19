@@ -10,14 +10,12 @@ import ServersPage from '@/pages/ServersPage';
 import ServerPage from '@/pages/ServerPage';
 import Account from '@/pages/Account';
 
-/** Маршрут, доступный только авторизованным пользователям. */
 function ProtectedRoute({ children }: { children: ReactElement }) {
   const { user } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
   return children;
 }
 
-/** Маршрут, доступный только гостям (перенаправляет авторизованных на Dashboard). */
 function GuestRoute({ children }: { children: ReactElement }) {
   const { user } = useAuth();
   if (user) return <Navigate to="/" replace />;

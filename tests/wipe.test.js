@@ -1,4 +1,3 @@
-// Тесты модуля вайпа.
 const { test } = require('node:test');
 const assert = require('node:assert');
 const os = require('node:os');

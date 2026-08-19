@@ -4,12 +4,6 @@ import AdmZip from 'adm-zip';
 import { httpGet } from './http';
 import type { ServerPayload } from './types';
 
-/**
- * Менеджер модов: установка/обновление/удаление фреймворка Oxide (uMod)
- * прямо в папку установки Rust-сервера. Архив скачивается с umod.org
- * и распаковывается в installPath (overwrite Managed + создание oxide/).
- */
-
 export interface ModStatus {
   installed: boolean;
   remoteVersion?: string;
@@ -29,10 +23,6 @@ function managedDir(server: ServerPayload): string {
   return server.installPath ? path.join(server.installPath, 'RustDedicated_Data', 'Managed') : '';
 }
 
-/**
- * Папка Oxide находится в identity-папке сервера: <installPath>/server/<identity>/oxide/
- * (именно оттуда вкладка «Плагины» читает oxide/plugins и oxide/config).
- */
 function oxideDir(server: ServerPayload): string {
   return server.installPath
     ? path.join(server.installPath, 'server', server.identity, 'oxide')
@@ -64,12 +54,10 @@ function localOxideVersion(server: ServerPayload): string | undefined {
     const p = path.join(oxideDir(server), 'version');
     if (fs.existsSync(p)) return fs.readFileSync(p, 'utf8').trim() || undefined;
   } catch {
-    // нет файла версии — не критично
   }
   return undefined;
 }
 
-/** Распаковка архива с защитой от zip-slip (выхода за пределы installPath). */
 function safeExtract(zip: AdmZip, target: string): void {
   for (const entry of zip.getEntries()) {
     const name = entry.entryName;
@@ -99,14 +87,12 @@ export async function installOxide(server: ServerPayload): Promise<ModStatus> {
   }
 }
 
-/** Удаление Oxide: папка oxide/ (в identity-папке и legacy в корне) + файлы Oxide.* в Managed. */
 export async function removeMod(
   server: ServerPayload
 ): Promise<{ ok: boolean; error?: string }> {
   if (!server.installPath) return { ok: false, error: 'Server install path is not configured.' };
   try {
     fs.rmSync(oxideDir(server), { recursive: true, force: true });
-    // legacy: старые сборки Oxide могли класть папку в корень установки
     const legacyOxide = path.join(server.installPath, 'oxide');
     if (legacyOxide !== oxideDir(server)) {
       fs.rmSync(legacyOxide, { recursive: true, force: true });
@@ -118,7 +104,6 @@ export async function removeMod(
           try {
             fs.unlinkSync(path.join(managed, f));
           } catch {
-            // файл занят запущенным сервером
           }
         }
       }
@@ -129,7 +114,6 @@ export async function removeMod(
   }
 }
 
-/** Статус Oxide: установлен ли фреймворк, актуальная версия, число плагинов. */
 export async function getModsStatus(server: ServerPayload): Promise<ModsStatusResult> {
   const oxideRemote = await remoteOxideVersion();
   const oxideInstalled =

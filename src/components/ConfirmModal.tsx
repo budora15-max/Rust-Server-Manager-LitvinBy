@@ -13,18 +13,12 @@ interface ConfirmModalProps {
   cancelLabel?: string;
   danger?: boolean;
   loading?: boolean;
-  /** Дополнительный контент (например, поле ввода имени для подтверждения). */
   children?: ReactNode;
-  /** Блокировать кнопку подтверждения (например, пока имя не совпало). */
   confirmDisabled?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }
 
-/**
- * Модалка подтверждения для деструктивных действий
- * (остановка сервера, вайп, удаление плагина) — "защита от дурака".
- */
 export function ConfirmModal({
   open,
   title,
@@ -69,4 +63,3 @@ export function ConfirmModal({
     </Modal>
   );
 }
-

@@ -1,4 +1,3 @@
-// Тесты чтения лога сервера (pull-режим + «начало текущей сессии»).
 const { test } = require('node:test');
 const assert = require('node:assert');
 const os = require('node:os');
@@ -51,11 +50,9 @@ test('readServerLogTail: sessionStart returns only the current session', () => {
   assert.ok(res.lines.some((l) => l.includes('NEW LINE 1')), 'current session line present');
   assert.ok(!res.lines.some((l) => l.includes('OLD LINE')), 'old session lines skipped');
 
-  // Инкрементальное чтение с полученного смещения не дублирует строки
   const res2 = readServerLogTail(makeServer(install), res.offset);
   assert.strictEqual(res2.lines.length, 0, 'no duplicates after returned offset');
 
-  // Без sessionStart — обычный хвост (последние ~64 КБ)
   const plain = readServerLogTail(makeServer(install), 0);
   assert.ok(plain.lines.length > 0, 'plain tail works');
   assert.ok(plain.lines.some((l) => l.includes('NEW LINE 3')), 'plain tail ends with latest lines');

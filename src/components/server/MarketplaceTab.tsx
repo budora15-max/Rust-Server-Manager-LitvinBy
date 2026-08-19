@@ -38,7 +38,6 @@ export function MarketplaceTab({ server }: { server: RustServer }) {
     setTimeout(() => setNotice((n) => (n?.text === text ? null : n)), 6000);
   };
 
-  // Загрузка топа и списка установленных плагинов
   useEffect(() => {
     if (!bridge) {
       setLoading(false);
@@ -57,7 +56,6 @@ export function MarketplaceTab({ server }: { server: RustServer }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bridge, server.id]);
 
-  // Живой поиск с debounce
   const doSearch = useCallback(
     async (value: string) => {
       const q = value.trim();
@@ -108,7 +106,6 @@ export function MarketplaceTab({ server }: { server: RustServer }) {
     }
   };
 
-  // Установка с диска: выбрать папку с .cs файлами плагинов.
   const handlePickDir = async () => {
     if (!bridge) return;
     try {
@@ -120,7 +117,6 @@ export function MarketplaceTab({ server }: { server: RustServer }) {
     }
   };
 
-  // Установить выбранный файл плагина в oxide/plugins сервера.
   const handleInstallFile = async (fileName: string) => {
     if (!bridge || !disk) return;
     setInstallingDisk(fileName);
@@ -332,4 +328,3 @@ export function MarketplaceTab({ server }: { server: RustServer }) {
     </div>
   );
 }
-

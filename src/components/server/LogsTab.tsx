@@ -19,7 +19,6 @@ function lineClass(line: string): string {
   return 'text-emerald-400/70';
 }
 
-/** Браузер файла лога сервера: поиск, фильтры уровня, автообновление. */
 export function LogsTab({ server }: LogsTabProps) {
   const bridge = window.rustManager;
   const { t } = useTranslation();

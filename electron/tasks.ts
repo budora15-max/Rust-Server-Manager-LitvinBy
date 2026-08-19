@@ -6,14 +6,6 @@ import type {
   ScheduledTask,
 } from './types';
 
-/**
- * Общий планировщик задач main-процесса: ежедневные перезапуски с
- * предупреждениями в чат, автобэкапы с ротацией, авторазбаны временных банов.
- * Задачи хранятся в одном JSON-файле (userData/scheduled-tasks.json), тик —
- * каждые 15 секунд. Повторяющиеся задачи (restart/backup) пересчитывают
- * nextRun сразу в тике, одноразовые (restartwarn/unban) удаляются перед запуском.
- */
-
 export interface TaskActions {
   onRestart: (task: ScheduledTask) => void;
   onWarning: (task: ScheduledTask) => void;
@@ -21,7 +13,6 @@ export interface TaskActions {
   onUnban: (task: ScheduledTask) => void;
 }
 
-/** Следующее наступление времени 'HH:MM' строго позже `from`. */
 export function nextDailyAt(time: string, from: Date): Date {
   const [h, m] = parseHhMm(time);
   const d = new Date(from);
@@ -30,7 +21,6 @@ export function nextDailyAt(time: string, from: Date): Date {
   return d;
 }
 
-/** Следующее наступление `weekday` (0=Вс..6=Сб) в `time` строго позже `from`. */
 export function nextWeeklyAt(weekday: number, time: string, from: Date): Date {
   const base = nextDailyAt(time, from);
   const day = (base.getDay() + 6) % 7; // 0=Пн
@@ -49,7 +39,6 @@ function parseHhMm(time: string): [number, number] {
   return [h, mi];
 }
 
-/** Следующее выполнение повторяющейся задачи. */
 export function nextRunFor(task: ScheduledTask, from: Date): Date {
   if (task.type === 'restart') return nextDailyAt(task.time || '00:00', from);
   if (task.type === 'backup') {
@@ -87,7 +76,6 @@ export class TaskScheduler {
     } catch {
       this.tasks = [];
     }
-    // Предупреждения, сильно просроченные (перезапуск уже прошёл), бесполезны.
     const now = Date.now();
     this.tasks = this.tasks.filter((t) => {
       if (t.type !== 'restartwarn') return true;
@@ -101,7 +89,6 @@ export class TaskScheduler {
       fs.mkdirSync(path.dirname(this.filePath), { recursive: true });
       fs.writeFileSync(this.filePath, JSON.stringify(this.tasks, null, 2), 'utf8');
     } catch {
-      // файл недоступен — не критично
     }
   }
 
@@ -116,7 +103,6 @@ export class TaskScheduler {
     this.save();
   }
 
-  /** Создание расписания ежедневного перезапуска + задач-предупреждений. */
   addRestart(input: RestartScheduleInput): ScheduledTask[] {
     const now = new Date();
     const restartId = `restart_${input.serverId}_${Date.now()}`;
@@ -154,7 +140,6 @@ export class TaskScheduler {
     return created;
   }
 
-  /** Создание расписания автобэкапа. */
   addBackup(input: BackupScheduleInput): ScheduledTask {
     const task: ScheduledTask = {
       id: `backup_${input.serverId}_${Date.now()}`,
@@ -181,7 +166,6 @@ export class TaskScheduler {
     if (this.timer) return;
     this.timer = setInterval(() => this.tick(), this.tickMs);
     if (typeof this.timer.unref === 'function') this.timer.unref();
-    // Первый проход вскоре после старта, чтобы «догнать» просроченные задачи.
     setTimeout(() => this.tick(), 2000);
   }
 
@@ -197,7 +181,6 @@ export class TaskScheduler {
       if (Number.isNaN(due) || due > now) continue;
 
       if (task.type === 'restart' || task.type === 'backup') {
-        // Сразу пересчитываем следующее время — задача не может сработать дважды.
         task.nextRun = nextRunFor(task, new Date()).toISOString();
         this.save();
         const action = task.type === 'restart' ? this.actions.onRestart : this.actions.onBackup;
@@ -205,11 +188,9 @@ export class TaskScheduler {
         continue;
       }
 
-      // Одноразовые задачи: удаляем перед выполнением.
       this.remove(task.id);
       if (task.type === 'restartwarn') this.actions.onWarning(task);
       else if (task.type === 'unban') this.actions.onUnban(task);
     }
   }
 }
-

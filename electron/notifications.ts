@@ -2,12 +2,6 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { app, Notification } from 'electron';
 
-/**
- * Центр уведомлений приложения: события (краш, авторестарт, вайп, бэкап,
- * перезапуск, бан/разбан) сохраняются в userData/notifications.json и
- * дублируются системным уведомлением Windows (если поддерживается).
- */
-
 export interface NotificationEntry {
   id: string;
   at: number;
@@ -33,11 +27,9 @@ function save(): void {
     fs.mkdirSync(path.dirname(storeFile()), { recursive: true });
     fs.writeFileSync(storeFile(), JSON.stringify(items, null, 2), 'utf8');
   } catch {
-    // не критично
   }
 }
 
-/** Регистрация колбэка «новое уведомление» (main шлёт broadcast рендереру). */
 export function setNotificationBroadcast(fn: (entry: NotificationEntry) => void): void {
   broadcaster = fn;
 }
@@ -55,7 +47,6 @@ export function listNotifications(): NotificationEntry[] {
   return [...items];
 }
 
-/** Добавление уведомления + системный тост Windows. */
 export function pushNotification(entry: NotificationEntry): void {
   items = [entry, ...items].slice(0, MAX_ITEMS);
   save();
@@ -65,7 +56,6 @@ export function pushNotification(entry: NotificationEntry): void {
       new Notification({ title: entry.title, body: entry.body, silent: true }).show();
     }
   } catch {
-    // уведомление может быть недоступно в некоторых окружениях
   }
 }
 

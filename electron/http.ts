@@ -6,7 +6,6 @@ export interface HttpResult {
   finalUrl: string;
 }
 
-/** HTTP GET с поддержкой редиректов и таймаута. */
 export function httpGet(url: string, redirects = 0): Promise<HttpResult> {
   return new Promise((resolve, reject) => {
     if (redirects > 5) return reject(new Error('Too many redirects'));

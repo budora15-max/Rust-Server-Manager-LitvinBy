@@ -50,4 +50,3 @@ export function StatusBadge({ status }: { status: ServerStatus }) {
     </span>
   );
 }
-

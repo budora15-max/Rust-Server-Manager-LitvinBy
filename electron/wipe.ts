@@ -6,10 +6,6 @@ function randomSeed(): number {
   return Math.floor(Math.random() * 2_147_483_647) + 1;
 }
 
-/**
- * Реальное выполнение вайпа: удаление .map/.db файлов из папки идентичности
- * и (опционально) генерация нового сида. Если папки нет — безопасная симуляция.
- */
 export function executeWipe(server: ServerPayload, options: WipeOptions): WipeResult {
   const idDir = server.installPath
     ? path.join(server.installPath, 'server', server.identity)
@@ -48,7 +44,6 @@ export function executeWipe(server: ServerPayload, options: WipeOptions): WipeRe
         fs.unlinkSync(path.join(idDir, f));
         deleted.push(f);
       } catch {
-        // файл может быть занят запущенным сервером
       }
     }
   }
@@ -59,7 +54,6 @@ export function executeWipe(server: ServerPayload, options: WipeOptions): WipeRe
         fs.unlinkSync(path.join(idDir, f));
         deleted.push(f);
       } catch {
-        // файл может быть занят запущенным сервером
       }
     }
   }

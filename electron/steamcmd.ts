@@ -13,7 +13,6 @@ const RUST_APP_ID = '258550';
 
 export type UpdateStage = 'checking' | 'downloading' | 'validating' | 'done' | 'error';
 
-/** Событие прогресса обновления: сообщение + разобранные метрики SteamCMD. */
 export interface SteamProgressEvent {
   message: string;
   pct?: number;
@@ -22,13 +21,11 @@ export interface SteamProgressEvent {
   totalMb?: number;
   speedMb?: number;
   etaSeconds?: number;
-  /** Последние строки вывода SteamCMD (для панели прогресса). */
   log?: string[];
 }
 
 export type UpdateEmitter = (event: SteamProgressEvent) => void;
 
-/** Активный процесс SteamCMD — для отмены обновления. */
 let activeUpdateChild: ChildProcess | null = null;
 
 function killTree(pid: number): void {
@@ -42,17 +39,14 @@ function killTree(pid: number): void {
     try {
       process.kill(pid, 'SIGTERM');
     } catch {
-      /* процесс уже завершился */
     }
   }
 }
 
-/** Отмена текущего обновления: завершает процесс SteamCMD. */
 export function cancelUpdate(): void {
   if (activeUpdateChild?.pid) killTree(activeUpdateChild.pid);
 }
 
-/** Разбор вывода SteamCMD: этап, проценты, размер загрузки, скорость. */
 function parseSteamLine(text: string): SteamProgressEvent {
   const out: SteamProgressEvent = { message: '' };
 
@@ -74,7 +68,6 @@ function parseSteamLine(text: string): SteamProgressEvent {
   if (/Success - App '\d+' fully installed/i.test(text)) out.stage = 'done';
   if (/ERROR!|failed/i.test(text) && !out.stage) out.stage = 'error';
 
-  // progress: 45.23 (123456 / 234567) — числа в байтах.
   const prog = /progress:\s*([\d.]+)\s*\(\s*([\d.]+)\s*\/\s*([\d.]+)\s*\)/i.exec(text);
   if (prog) {
     out.pct = Math.min(100, Math.round(Number(prog[1]) * 10) / 10);
@@ -82,7 +75,6 @@ function parseSteamLine(text: string): SteamProgressEvent {
     out.totalMb = Math.round(Number(prog[3]) / (1024 * 1024));
   }
 
-  // Downloading update (1234 / 5678 MB, 12.3 MB/s)
   const dl = /Downloading update\s*\(([\d.]+)\s*\/\s*([\d.]+)\s*MB,\s*([\d.]+)\s*MB\/s\)/i.exec(text);
   if (dl) {
     out.downloadedMb = Math.round(Number(dl[1]));
@@ -123,7 +115,6 @@ function extractArchive(archivePath: string, dest: string): Promise<void> {
   });
 }
 
-/** Гарантирует наличие steamcmd.exe (скачивает и распаковывает при необходимости). */
 async function ensureSteamCmd(emit: UpdateEmitter): Promise<string> {
   const exe = steamcmdExe();
   if (fs.existsSync(exe)) return exe;
@@ -144,12 +135,6 @@ async function ensureSteamCmd(emit: UpdateEmitter): Promise<string> {
   return steamcmdExe();
 }
 
-/**
- * Обновление серверной части Rust через SteamCMD:
- * +force_install_dir <путь> +login anonymous +app_update 258550 validate +quit.
- * Вывод SteamCMD разбирается в события прогресса: этап, проценты, скорость,
- * ETA и живой лог (последние ~150 строк) — для панели прогресса в UI.
- */
 export async function updateRustServer(
   server: ServerPayload,
   emit: UpdateEmitter
@@ -185,7 +170,6 @@ export async function updateRustServer(
       activeUpdateChild = child;
 
       const logLines: string[] = [];
-      /** Сэмплы (время, скачано МБ) — расчёт скорости, если SteamCMD её не печатает. */
       const samples: Array<{ at: number; mb: number }> = [];
       let last: SteamProgressEvent = { message: '' };
 
@@ -206,7 +190,6 @@ export async function updateRustServer(
           log: logLines.slice(),
         };
 
-        // Скорость и ETA считаем по разнице сэмплов, если SteamCMD не указал MB/s.
         if (event.downloadedMb !== undefined) {
           samples.push({ at: Date.now(), mb: event.downloadedMb });
           if (samples.length > 6) samples.shift();

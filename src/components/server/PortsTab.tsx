@@ -281,4 +281,3 @@ export function PortsTab({ server }: PortsTabProps) {
     </div>
   );
 }
-

@@ -34,7 +34,6 @@ export const DEFAULT_WEBHOOK_CONFIG: WebhookConfig = {
   notifyWipe: true,
 };
 
-/** Цвет Rust-акцента для Embed-карточек: #e05638. */
 const RUST_COLOR = 0xe05638;
 
 function webhookConfigPath(serverId: string): string {
@@ -147,7 +146,6 @@ function buildEmbed(payload: WebhookPayload): Record<string, unknown> {
   };
 }
 
-/** Отправка уведомления с учётом сохранённого конфига сервера. */
 export async function sendWebhookEvent(
   serverId: string,
   payload: WebhookPayload
@@ -167,7 +165,6 @@ export async function sendWebhookEvent(
   return postJson(config.url, { embeds: [buildEmbed(payload)] });
 }
 
-/** Тестовая карточка для проверки интеграции. */
 export async function sendWebhookTest(
   config: WebhookConfig
 ): Promise<{ ok: boolean; status?: number; error?: string }> {

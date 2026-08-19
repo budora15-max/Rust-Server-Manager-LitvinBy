@@ -8,21 +8,14 @@ interface SysMemory {
   freeMb: number;
 }
 
-/** Период опроса системной памяти. */
 const POLL_MS = 10_000;
 
 interface SystemMemoryPanelProps {
   serverMb: number;
-  /** Заголовок панели (по умолчанию из локали serverPage.memory.title). */
   title?: string;
-  /** Подпись колонки «сервер/сервера» (по умолчанию serverPage.memory.server). */
   serverLabel?: string;
 }
 
-/**
- * Панель памяти: RAM сервера (процесс), занято всеми процессами ОС и общий объём.
- * Системные значения приходят из main (os.totalmem/freemem) через IPC.
- */
 export function SystemMemoryPanel({ serverMb, title, serverLabel }: SystemMemoryPanelProps) {
   const { t } = useTranslation();
   const [mem, setMem] = useState<SysMemory | null>(null);
@@ -36,7 +29,6 @@ export function SystemMemoryPanel({ serverMb, title, serverLabel }: SystemMemory
         const res = await bridge.systemMemory();
         if (!cancelled) setMem(res);
       } catch {
-        /* IPC недоступен — оставляем прежнее значение */
       }
     };
     void load();

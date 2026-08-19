@@ -6,56 +6,43 @@ import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { formatUptime } from '@/lib/utils';
 
-/** Пароли, которые Rust считает «очень небезопасными» и полностью отключает RCON. */
 const INSECURE_RCON_PASSWORDS = ['changeme', 'password', '123456', 'admin', 'qwerty', 'test', 'server', 'rust'];
 
 const isInsecureRconPassword = (p: string): boolean =>
   p.length < 8 || INSECURE_RCON_PASSWORDS.includes(p.toLowerCase().trim());
 
-/** Значение конвара gamemode для записи в server.cfg (пусто = обычный Vanilla). */
 const cfgGamemode = (g: string): string => {
   const v = g.trim();
   return v ? v : '""';
 };
 
-/** Чтение gamemode из server.cfg: убираем кавычки пустого значения `""`. */
 const normalizeGamemode = (v?: string): string => (v || '').trim().replace(/^"+|"+$/g, '');
 
-/** Путь к папке сохранений сервера: <installPath>/server/<identity>. */
 function serverIdentityPath(installPath: string, identity: string): string {
   const base = installPath.trim().replace(/[\\/]+$/, '');
   return `${base ? `${base}/` : ''}server/${identity.trim() || '<identity>'}`;
 }
 
-/** Доступные теги сервера (server.tags), максимум 3. */
 const SERVER_TAGS = ['pve', 'roleplay', 'creative', 'minigame', 'training', 'battlefield', 'broyale', 'builds'] as const;
 
-/** Частота вайпов как тег (часть server.tags). */
 const WIPE_FREQUENCY_TAGS = ['weekly', 'biweekly', 'monthly'] as const;
 
-/** Регион как тег (часть server.tags). */
 const REGION_TAGS = ['eu', 'na', 'ru', 'sa', 'as', 'oc', 'af'] as const;
 
-/** Пустую строку пишем как `""` — так Rust очищает предыдущее значение конвара. */
 const cfgStr = (v?: string): string => (v ?? '').trim() || '""';
 
-/** Чтение строки из server.cfg: кавычки `""` → пустая строка. */
 const readCfgStr = (v?: string): string => (v ?? '').replace(/^"+|"+$/g, '');
 
-/** Многострочное описание → одна строка с литеральными \n для server.cfg. */
 const cfgDescription = (v: string): string => (v ?? '').replace(/\r?\n/g, '\\n');
 
-/** Из server.cfg: литеральные \n → переносы строк для textarea. */
 const readDescription = (v?: string): string => (v ?? '').replace(/\\n/g, '\n');
 
-/** server.tags из server.cfg → массив тегов. */
 const readTags = (v?: string): string[] =>
   (v ?? '')
     .split(',')
     .map((t) => t.trim())
     .filter(Boolean);
 
-/** Разбор server.tags: контентные теги (≤3) + частота вайпов + регион. */
 function splitTags(cfgTags?: string): { tags: string[]; wipeFrequencyTag: string; regionTag: string } {
   const all = readTags(cfgTags);
   const wipe = all.find((t) => (WIPE_FREQUENCY_TAGS as readonly string[]).includes(t)) ?? '';
@@ -64,12 +51,10 @@ function splitTags(cfgTags?: string): { tags: string[]; wipeFrequencyTag: string
   return { tags: content.slice(0, 3), wipeFrequencyTag: wipe, regionTag: region };
 }
 
-/** Теги → строка для server.cfg (контент + частота вайпов + регион, через запятую). */
 function tagsToCfg(tags: string[], wipeFrequencyTag: string, regionTag: string): string {
   return [...tags, wipeFrequencyTag, regionTag].filter(Boolean).join(',');
 }
 
-/** Проверка URL (http/https). */
 const isValidHttpUrl = (value: string): boolean => {
   try {
     const u = new URL(value);
@@ -164,8 +149,6 @@ export function GeneralTab({ server, onSave }: GeneralTabProps) {
   >(undefined);
 
   const set = (key: keyof GeneralForm) => (value: string) => {
-    // При смене игрового порта автоматически сдвигаем RCON-порт (игра + 2),
-    // если он ещё не был изменён пользователем вручную.
     if (key === 'port') {
       const oldPort = Number(form.port);
       const newPort = Number(value);
@@ -198,7 +181,6 @@ export function GeneralTab({ server, onSave }: GeneralTabProps) {
     if (picked) set('installPath')(picked);
   };
 
-  /** Применение импортированного сервера к форме. */
   const applyServer = (s: RustServer) => {
     setForm({
       identity: s.identity,
@@ -253,7 +235,6 @@ export function GeneralTab({ server, onSave }: GeneralTabProps) {
         }));
       }
     } catch {
-      // IPC недоступен
     }
   };
 
@@ -275,11 +256,9 @@ export function GeneralTab({ server, onSave }: GeneralTabProps) {
         }));
       }
     } catch {
-      // IPC недоступен
     }
   };
 
-  // Чтение/заполнение формы из server.cfg
   const loadConfig = async (silent = false) => {
     const bridge = window.rustManager;
     if (!bridge) return;
@@ -336,7 +315,6 @@ export function GeneralTab({ server, onSave }: GeneralTabProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Проверка наличия исполняемого файла сервера в указанной папке
   useEffect(() => {
     const path = form.installPath.trim();
     const bridge = window.rustManager;
@@ -362,7 +340,6 @@ export function GeneralTab({ server, onSave }: GeneralTabProps) {
     };
   }, [form.installPath]);
 
-  /** Переключение тега сервера (максимум 3). */
   const toggleTag = (tag: string) => {
     setForm((prev) => {
       if (prev.tags.includes(tag)) return { ...prev, tags: prev.tags.filter((x) => x !== tag) };
@@ -478,7 +455,6 @@ export function GeneralTab({ server, onSave }: GeneralTabProps) {
       startWithManager: form.startWithManager,
     });
 
-    // Дублируем ключевые настройки в server.cfg
     if (window.rustManager) {
       const cfg: Record<string, string> = {
         'server.identity': form.identity.trim(),
@@ -1022,4 +998,3 @@ export function GeneralTab({ server, onSave }: GeneralTabProps) {
     </div>
   );
 }
-

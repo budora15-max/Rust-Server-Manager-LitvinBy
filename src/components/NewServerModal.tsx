@@ -33,7 +33,6 @@ const INITIAL: NewServerForm = {
   map: 'Procedural Map',
 };
 
-/** Модальное окно создания нового сервера в менеджере. */
 export function NewServerModal({ open, onClose }: NewServerModalProps) {
   const { t } = useTranslation();
   const { addServer } = useServer();

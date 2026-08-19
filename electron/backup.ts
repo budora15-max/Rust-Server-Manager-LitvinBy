@@ -2,11 +2,9 @@ import * as fs from 'fs';
 import * as path from 'path';
 import type { ServerPayload } from './types';
 
-/** Файлы мира, которые нужно бэкапить: карты, сейвы, базы данных. */
 const WORLD_FILE_RE = /\.(sav|map|db|db-wal|db-shm|db\.\d+)$/i;
 
 export interface BackupEntry {
-  /** Имя папки бэкапа (<timestamp>-<label>). */
   id: string;
   path: string;
   createdAt: number;
@@ -29,7 +27,6 @@ function backupsDir(server: ServerPayload): string {
   return server.installPath ? path.join(server.installPath, 'backups', server.identity) : '';
 }
 
-/** Создание резервной копии мира (карты + базы) в installPath/backups/<identity>/. */
 export function createWorldBackup(server: ServerPayload, label = 'manual'): BackupResult {
   const idDir = identityDir(server);
   if (!idDir || !fs.existsSync(idDir)) {
@@ -40,7 +37,6 @@ export function createWorldBackup(server: ServerPayload, label = 'manual'): Back
   const safeLabel =
     label.replace(/[^\wа-яА-ЯёЁ -]/gi, '').trim().replace(/\s+/g, '_').slice(0, 40) || 'backup';
   let dest = path.join(backupsDir(server), `${stamp}-${safeLabel}`);
-  // два бэкапа могут попасть в одну и ту же миллисекунду — делаем имя уникальным
   let n = 2;
   while (fs.existsSync(dest)) {
     dest = path.join(backupsDir(server), `${stamp}-${safeLabel}-${n}`);
@@ -59,7 +55,6 @@ export function createWorldBackup(server: ServerPayload, label = 'manual'): Back
         sizeBytes += fs.statSync(src).size;
         fileCount += 1;
       } catch {
-        // файл может быть занят запущенным сервером — пропускаем
       }
     }
     if (fileCount === 0) {
@@ -82,7 +77,6 @@ export function createWorldBackup(server: ServerPayload, label = 'manual'): Back
   }
 }
 
-/** Список резервных копий мира (от новых к старым). */
 export function listWorldBackups(server: ServerPayload): BackupEntry[] {
   const dir = backupsDir(server);
   if (!dir || !fs.existsSync(dir)) return [];
@@ -101,7 +95,6 @@ export function listWorldBackups(server: ServerPayload): BackupEntry[] {
             fileCount += 1;
           }
         } catch {
-          // папка могла быть удалена
         }
         return {
           id: d.name,
@@ -118,7 +111,6 @@ export function listWorldBackups(server: ServerPayload): BackupEntry[] {
   }
 }
 
-/** Восстановление мира из бэкапа (копирует файлы обратно в identity-папку). */
 export function restoreWorldBackup(server: ServerPayload, backupId: string): BackupResult {
   const idDir = identityDir(server);
   const src = path.join(backupsDir(server), backupId);
@@ -134,7 +126,6 @@ export function restoreWorldBackup(server: ServerPayload, backupId: string): Bac
         fs.copyFileSync(from, path.join(idDir, f));
         count += 1;
       } catch (err) {
-        // файл может быть занят запущенным сервером
         return { ok: false, error: `Cannot restore "${f}": ${err instanceof Error ? err.message : String(err)}. Stop the server first.` };
       }
     }
@@ -144,7 +135,6 @@ export function restoreWorldBackup(server: ServerPayload, backupId: string): Bac
   }
 }
 
-/** Удаление резервной копии. */
 export function deleteWorldBackup(server: ServerPayload, backupId: string): { ok: boolean; error?: string } {
   const dir = path.join(backupsDir(server), backupId);
   if (!fs.existsSync(dir)) return { ok: false, error: 'Backup not found.' };

@@ -172,4 +172,3 @@ export function UpdateProgressPanel({ state, onCancel, onClose }: UpdateProgress
     </div>
   );
 }
-

@@ -2,7 +2,6 @@ import type { ReactNode } from 'react';
 import { Sidebar } from './Sidebar';
 import { NotificationsBell } from './NotificationsBell';
 
-/** Общий каркас страниц приложения: боковая панель + шапка + контент. */
 export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen bg-background">

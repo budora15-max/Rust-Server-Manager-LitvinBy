@@ -60,7 +60,6 @@ function buildChart(samples: MetricSample[], period: Period, fallbackMax: number
   return { labels, data, max: Math.max(Math.max(...data), fallbackMax) };
 }
 
-/** Посещаемость сервера за период: график онлайн + пик/среднее. */
 export function AnalyticsSection({ server }: { server: RustServer }) {
   const bridge = window.rustManager;
   const { t } = useTranslation();
@@ -170,4 +169,3 @@ export function AnalyticsSection({ server }: { server: RustServer }) {
     </div>
   );
 }
-

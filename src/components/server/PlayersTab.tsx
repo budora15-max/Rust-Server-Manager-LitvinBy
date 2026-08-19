@@ -67,18 +67,15 @@ export function PlayersTab({ server }: PlayersTabProps) {
     }, 5000);
   };
 
-  /** Временные баны (задачи авторазбана) для этого сервера. */
   const loadTempBans = useCallback(async () => {
     if (!bridge) return;
     try {
       const list = await bridge.tasksList();
       setTempBans((list ?? []).filter((t) => t.serverId === server.id && t.type === 'unban'));
     } catch {
-      // IPC недоступен
     }
   }, [bridge, server.id]);
 
-  // Сброс длительности при смене действия
   useEffect(() => {
     setDurationMinutes(0);
   }, [action]);
@@ -134,7 +131,6 @@ export function PlayersTab({ server }: PlayersTabProps) {
     setBanned([]);
   };
 
-  // Проверяем статус RCON при монтировании
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -146,7 +142,6 @@ export function PlayersTab({ server }: PlayersTabProps) {
           if (isConn) void refresh();
         }
       } catch {
-        // IPC недоступен
       }
     })();
     return () => {
@@ -155,7 +150,6 @@ export function PlayersTab({ server }: PlayersTabProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [server.id]);
 
-  // Загрузка временных банов + подписка на изменение задач
   useEffect(() => {
     void loadTempBans();
   }, [loadTempBans]);
@@ -194,7 +188,6 @@ export function PlayersTab({ server }: PlayersTabProps) {
     }
   };
 
-  /** Немедленный разбан временного бана (без ожидания планировщика). */
   const unbanNow = async (tb: ScheduledTask) => {
     if (!bridge || !tb.steamId) return;
     try {
@@ -450,4 +443,3 @@ export function PlayersTab({ server }: PlayersTabProps) {
     </div>
   );
 }
-

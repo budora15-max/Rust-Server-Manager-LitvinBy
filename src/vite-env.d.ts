@@ -1,4 +1,3 @@
-/// <reference types="vite/client" />
 import type {
   BackupEntry,
   BackupScheduleInput,
@@ -32,7 +31,6 @@ import type {
 
 declare global {
   interface Window {
-    /** Мост, предоставляемый preload-скриптом Electron. */
     rustManager?: {
       platform: string;
 
@@ -300,4 +298,3 @@ declare global {
 }
 
 export {};
-

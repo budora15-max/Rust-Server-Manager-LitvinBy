@@ -11,9 +11,7 @@ export interface MarketplacePlugin {
   author: string;
   category: string;
   downloads: number;
-  /** Актуальная версия на uMod (например v2.0.0). */
   version?: string;
-  /** Ссылка на страницу плагина на uMod. */
   url?: string;
 }
 
@@ -27,7 +25,6 @@ interface DbPlugin {
   downloads: number;
 }
 
-// Статическая база популярных Oxide-плагинов (uMod не отдаёт топ одним запросом).
 const MARKETPLACE_DB: DbPlugin[] = [
   { slug: 'image-library', name: 'ImageLibrary', author: 'MJSU', category: 'Libraries', downloads: 1800000, description_ru: 'Библиотека изображений и иконок для других плагинов.', description_en: 'Image and icon library used by many other plugins.' },
   { slug: 'nteleportation', name: 'NTeleportation', author: 'VisEntities', category: 'Teleport', downloads: 2200000, description_ru: 'Телепортация: дома, точки, телепорт к игроку и по запросу.', description_en: 'Teleportation: homes, points, player teleport and TPR requests.' },
@@ -61,15 +58,11 @@ const MARKETPLACE_DB: DbPlugin[] = [
   { slug: 'craftingcontroller', name: 'CraftingController', author: 'Nogrod', category: 'Crafting', downloads: 730000, description_ru: 'Настройка крафта: скорость, ограничения, отключение.', description_en: 'Crafting control: speed, limits and toggles.' },
 ];
 
-
-/** Игры, для которых подходят плагины (Rust и универсальные). */
 const RUST_GAMES = new Set(['rust', 'universal']);
 
-/** Кэш «популярного» каталога с uMod (запрос к каталогу — несколько страниц). */
 let topCache: { at: number; items: MarketplacePlugin[] } | null = null;
 const TOP_TTL_MS = 6 * 3600_000; // обновляем не чаще раза в 6 часов
 
-/** Небольшая пауза между запросами к uMod, чтобы не словить rate-limit (429). */
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -88,7 +81,6 @@ function mapItem(item: SearchItem): MarketplacePlugin {
   };
 }
 
-/** Загрузка «топа» плагинов с uMod: пустой поиск + сортировка по загрузкам. */
 async function fetchUmodTop(): Promise<MarketplacePlugin[]> {
   const seen = new Set<string>();
   const out: MarketplacePlugin[] = [];
@@ -112,10 +104,6 @@ async function fetchUmodTop(): Promise<MarketplacePlugin[]> {
   return out.slice(0, 30);
 }
 
-/**
- * Список популярных плагинов (живой каталог с uMod по загрузкам).
- * При недоступности uMod — статическая база популярных Oxide-плагинов.
- */
 export async function getMarketplaceList(lang: string): Promise<MarketplacePlugin[]> {
   if (topCache && Date.now() - topCache.at < TOP_TTL_MS) return topCache.items;
   try {
@@ -125,7 +113,6 @@ export async function getMarketplaceList(lang: string): Promise<MarketplacePlugi
       return items;
     }
   } catch {
-    // uMod недоступен — используем локальную базу
   }
   return MARKETPLACE_DB.map((p) => ({
     slug: p.slug,
@@ -152,7 +139,6 @@ interface SearchItem {
   games_detail?: Array<{ slug?: string }>;
 }
 
-/** Преобразование запроса в slug для точечного запроса uMod: "Admin Chatroom" → "admin-chatroom". */
 function slugifyQuery(query: string): string {
   return query
     .toLowerCase()
@@ -160,14 +146,6 @@ function slugifyQuery(query: string): string {
     .replace(/^-+|-+$/g, '');
 }
 
-/**
- * Живой поиск по uMod. API search.json не фильтрует по запросу (возвращает
- * каталог целиком), поэтому сканируем несколько страниц «топа» (по загрузкам)
- * и фильтруем на стороне клиента по имени/тегам/автору.
- * Если в топе ничего не найдено — делаем точечный запрос по слагу
- * (https://umod.org/plugins/<slug>.json), чтобы находить и малопопулярные
- * плагины по точному названию. Сканируем не больше 5 страниц с паузой.
- */
 export async function searchMarketplace(query: string): Promise<MarketplacePlugin[]> {
   const q = query.trim().toLowerCase();
   if (!q) return [];
@@ -196,7 +174,6 @@ export async function searchMarketplace(query: string): Promise<MarketplacePlugi
       if (out.length >= 24) break;
     }
 
-    // Fallback: точный slug (например «admin chatroom» → admin-chatroom).
     if (out.length === 0) {
       const slug = slugifyQuery(q);
       if (slug) {
@@ -224,7 +201,6 @@ export interface InstallResult {
   error?: string;
 }
 
-/** Установка плагина: скачивание .cs с uMod и сохранение в oxide/plugins сервера. */
 export async function installMarketplacePlugin(
   server: ServerPayload,
   slug: string
@@ -247,7 +223,6 @@ export async function installMarketplacePlugin(
     const pluginsDir = path.join(server.installPath, 'server', server.identity, 'oxide', 'plugins');
     fs.mkdirSync(pluginsDir, { recursive: true });
 
-    // Имя файла берём из download_url (например .../Kits.cs), иначе slug.cs
     const downloadFileName = path.basename(new URL(info.downloadUrl).pathname);
     const fileName = downloadFileName.endsWith('.cs') ? downloadFileName : `${slug}.cs`;
     const targetPath = path.join(pluginsDir, fileName);

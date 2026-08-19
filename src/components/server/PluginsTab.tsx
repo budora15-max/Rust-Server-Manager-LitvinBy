@@ -32,7 +32,6 @@ interface CachedScan {
 
 const CACHE_TTL_MS = 60 * 60_000;
 
-/** Загрузка кэша сканирования (со статусами обновлений) из sessionStorage. */
 function loadCachedPlugins(cacheKey: string): PluginInfo[] | null {
   try {
     const raw = sessionStorage.getItem(cacheKey);
@@ -87,13 +86,10 @@ export function PluginsTab({ server }: { server: RustServer }) {
       const listRes = await bridge.pluginsList(server);
       setResult(listRes);
 
-      // Синхронизируем счётчик плагинов для «Свойств сервера» и карточек на дашборде.
       if (listRes.ok && server.installedPlugins !== listRes.plugins.length) {
         updateServer(server.id, { installedPlugins: listRes.plugins.length });
       }
 
-      // Проверка версий может временно падать (сеть/rate-limit) —
-      // в этом случае сохраняем прежние бейджи обновлений.
       let updates: PluginUpdateStatus[] = [];
       let updatesOk = true;
       try {
@@ -114,7 +110,6 @@ export function PluginsTab({ server }: { server: RustServer }) {
                 updateAvailable: u.updateAvailable,
               };
             }
-            // uMod недоступен сейчас — оставляем последний известный статус
             const prevPlugin = prev.find((pp) => pp.id === p.id);
             if (prevPlugin?.updateAvailable && prevPlugin.latestVersion) {
               return { ...p, latestVersion: prevPlugin.latestVersion, updateAvailable: true };
@@ -125,7 +120,6 @@ export function PluginsTab({ server }: { server: RustServer }) {
             try {
               sessionStorage.setItem(cacheKey, JSON.stringify({ at: Date.now(), plugins: merged }));
             } catch {
-              // кэш не критичен
             }
           }
           return merged;
@@ -158,7 +152,6 @@ export function PluginsTab({ server }: { server: RustServer }) {
     scan();
   };
 
-  /** Включение/выключение плагина (переименование .disabled). */
   const handleToggle = async (plugin: PluginInfo) => {
     if (!bridge) {
       pushNotice('ok', 'Demo: toggle simulated.');
@@ -175,7 +168,6 @@ export function PluginsTab({ server }: { server: RustServer }) {
     }
   };
 
-  /** Открытие редактора JSON-конфига плагина. */
   const openConfig = async (plugin: PluginInfo) => {
     if (!bridge) return;
     setConfigError('');
@@ -474,4 +466,3 @@ export function PluginsTab({ server }: { server: RustServer }) {
     </div>
   );
 }
-

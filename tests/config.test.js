@@ -1,4 +1,3 @@
-// Тесты модуля конфигурации server.cfg.
 const { test } = require('node:test');
 const assert = require('node:assert');
 const os = require('node:os');
@@ -85,7 +84,6 @@ test('sanitizeServerConfig quotes values with spaces', () => {
   assert.ok(after.includes('server.level "Procedural Map"'), 'quoted');
   assert.ok(after.includes('server.seed 111'), 'no-space value untouched');
 
-  // Второй проход — уже корректно
   assert.strictEqual(sanitizeServerConfig(server), false, 'no change on second pass');
   fs.rmSync(root, { recursive: true, force: true });
 });

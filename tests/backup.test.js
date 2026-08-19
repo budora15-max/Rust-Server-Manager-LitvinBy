@@ -1,4 +1,3 @@
-// Тесты модуля бэкапов мира.
 const { test } = require('node:test');
 const assert = require('node:assert');
 const os = require('node:os');
@@ -51,7 +50,6 @@ test('create/list/restore/delete backup', () => {
   const list = listWorldBackups(server);
   assert.strictEqual(list.length, 1, 'one backup in list');
 
-  // Восстановление: удаляем мир и возвращаем из бэкапа
   fs.rmSync(path.join(server.installPath, 'server', 'main'), { recursive: true, force: true });
   const restored = restoreWorldBackup(server, created.entry.id);
   assert.ok(restored.ok, `restore ok: ${restored.error ?? ''}`);
