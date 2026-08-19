@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "Rust Server Manager",
+    "name": "Rust Server Manager LitvinBY",
     "tagline": "Управляйте серверами Rust из одного окна"
   },
   "auth": {
@@ -541,7 +541,7 @@
       "wipeTitle": "🧹 Вайп завершен",
       "wipeDesc": "На сервере **«{{name}}»** успешно проведен вайп!",
       "testTitle": "🧪 Тестовое уведомление",
-      "testDesc": "Интеграция с Rust Server Manager успешно настроена!",
+      "testDesc": "Интеграция с Rust Server Manager LitvinBY успешно настроена!",
       "map": "Карта",
       "worldSize": "Размер",
       "seed": "Сид",

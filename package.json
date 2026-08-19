@@ -68,7 +68,7 @@
   },
   "build": {
     "appId": "com.rustservermanager.app",
-    "productName": "Rust Server Manager",
+    "productName": "Rust Server Manager LitvinBY",
     "directories": {
       "output": "release"
     },

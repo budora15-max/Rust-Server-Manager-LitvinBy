@@ -260,7 +260,7 @@ function buildEmbed(payload: WebhookPayload): Record<string, unknown> {
     timestamp: new Date().toISOString(),
     fields,
     footer: {
-      text: 'Rust Server Manager',
+      text: 'Rust Server Manager LitvinBY',
       icon_url: 'https://rust.facepunch.com/assets/img/logo.png',
     },
   };
@@ -296,7 +296,7 @@ export async function sendWebhookTest(
         description: trWebhook('testDesc'),
         color: RUST_COLOR,
         timestamp: new Date().toISOString(),
-        footer: { text: 'Rust Server Manager' },
+        footer: { text: 'Rust Server Manager LitvinBY' },
       },
     ],
   });

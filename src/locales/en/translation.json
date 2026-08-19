@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "Rust Server Manager",
+    "name": "Rust Server Manager LitvinBY",
     "tagline": "Control your Rust servers from one place"
   },
   "auth": {
@@ -541,7 +541,7 @@
       "wipeTitle": "🧹 Wipe completed",
       "wipeDesc": "The wipe on server **\"{{name}}\"** has been completed!",
       "testTitle": "🧪 Test notification",
-      "testDesc": "Rust Server Manager integration has been configured successfully!",
+      "testDesc": "Rust Server Manager LitvinBY integration has been configured successfully!",
       "map": "Map",
       "worldSize": "World Size",
       "seed": "Seed",

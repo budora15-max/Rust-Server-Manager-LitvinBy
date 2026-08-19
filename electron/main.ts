@@ -96,7 +96,7 @@ function createWindow(): void {
     height: 800,
     minWidth: 1024,
     minHeight: 700,
-    title: 'Rust Server Manager',
+    title: 'Rust Server Manager LitvinBY',
     icon: winIcon.isEmpty() ? undefined : winIcon,
     backgroundColor: '#0f1115',
     autoHideMenuBar: true,
@@ -152,7 +152,7 @@ function showTrayHintOnce(): void {
   }
   try {
     new Notification({
-      title: 'Rust Server Manager',
+      title: 'Rust Server Manager LitvinBY',
       body: 'Приложение свёрнуто в трей. Если иконка не видна — нажмите «^» рядом с часами и перетащите её на панель задач.',
     }).show();
   } catch {
@@ -376,7 +376,7 @@ function createTray(): void {
       image = nativeImage.createFromDataURL(TRAY_ICON_FALLBACK);
     }
     tray = new Tray(image.resize({ width: 16, height: 16 }));
-    tray.setToolTip('Rust Server Manager');
+    tray.setToolTip('Rust Server Manager LitvinBY');
     trayLog(`trayCreated=${Boolean(tray)} destroyed=${tray.isDestroyed()}`);
   } catch (err) {
     trayLog(`ERROR: ${String(err)}`);
@@ -386,7 +386,7 @@ function createTray(): void {
   }
   const ru = getLocale() === 'ru';
   const menu = Menu.buildFromTemplate([
-    { label: 'Rust Server Manager', enabled: false },
+    { label: 'Rust Server Manager LitvinBY', enabled: false },
     { type: 'separator' },
     { label: ru ? 'Открыть менеджер' : 'Open Manager', click: () => showWindow() },
     {
@@ -1272,7 +1272,7 @@ function registerIpc(): void {
           file,
           '[Desktop Entry]\n' +
             'Type=Application\n' +
-            'Name=Rust Server Manager\n' +
+            'Name=Rust Server Manager LitvinBY\n' +
             'Comment=Manage Rust game servers\n' +
             `Exec=${process.execPath}\n` +
             'X-GNOME-Autostart-enabled=true\n',

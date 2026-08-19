@@ -19,7 +19,7 @@ export interface SaveConfigResult {
 
 const DEFAULT_CONFIG: Record<string, string> = {
   'server.name': 'Rust Server',
-  'server.description': 'Powered by Rust Server Manager',
+  'server.description': 'Powered by Rust Server Manager LitvinBY',
   'server.identity': 'main',
   'server.level': 'Procedural Map',
   'server.seed': '682198445',

@@ -28,7 +28,7 @@ export interface ExternalProbeResult {
 
 function ruleName(server: ServerPayload, port: number, protocol: string): string {
   const safe = (server.name || server.id).replace(/[^\wа-яА-ЯёЁ -]/gi, '').trim() || 'server';
-  return `Rust Server Manager - ${safe} - ${port}/${protocol}`;
+  return `Rust Server Manager LitvinBY - ${safe} - ${port}/${protocol}`;
 }
 
 export function serverPorts(server: ServerPayload): Array<{
