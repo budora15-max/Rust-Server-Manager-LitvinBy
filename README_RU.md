@@ -1,8 +1,9 @@
+
 # Rust Server Manager LitvinBY
 
 ℹ️ **Ищете английскую версию?** Документация на английском доступна здесь: [README.md](README.md).
 
----
+---<img width="1499" height="628" alt="one" src="https://github.com/user-attachments/assets/f4a06883-9841-48ef-9b97-d10339c218c8" />
 
 Десктопная утилита для Windows и Linux, разработанная для управления выделенными серверами Rust. Мониторинг процессов, RCON, моды, вайпы и бэкапы — все в одном удобном окне.
 
