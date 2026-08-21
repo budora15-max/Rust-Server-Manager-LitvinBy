@@ -1,6 +1,7 @@
 ℹ️ **Looking for the Russian version?** You can read the documentation in Russian here: [README_RU.md](README_RU.md).
 
 ---
+<img width="1499" height="628" alt="one" src="https://github.com/user-attachments/assets/d9477ca8-335c-4056-b0f4-dd5304b312f1" />
 
 # Rust Server Manager LitvinBY
 
